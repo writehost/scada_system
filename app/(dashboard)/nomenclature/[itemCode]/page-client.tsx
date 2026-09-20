@@ -1008,7 +1008,6 @@ function NomenclatureItemPageInner() {
                     setForm={setNomForm}
                     loading={nomSaving}
                     lockCode
-                    defaultTab="main"
                     scrollMode="page"
                   />
                 </div>
