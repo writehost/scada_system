@@ -1,0 +1,43 @@
+/** SSCC палеты: 00 + 18 цифр, иногда сканер отдаёт 18 цифр без AI. */
+export function isSsccCode(raw: string): boolean {
+  const compact = String(raw || "").replace(/[\s\u001d()]/g, "")
+  if (/^00\d{18}$/.test(compact)) return true
+  if (/^\d{18}$/.test(compact)) return true
+  const digits = compact.replace(/\D/g, "")
+  return digits.length === 18 || (digits.length === 20 && digits.startsWith("00"))
+}
+
+export function normalizeSscc(raw: string): string {
+  const digits = String(raw || "").replace(/\D/g, "")
+  if (digits.length === 18) return `00${digits}`
+  if (digits.length === 20 && digits.startsWith("00")) return digits
+  return String(raw || "").trim()
+}
+
+/** Vekas PrintedOn без таймзоны — не переводим в UTC. */
+export function printTimeKey(value: string | null | undefined): string {
+  return String(value || "")
+    .replace(/Z$/i, "")
+    .trim()
+    .slice(0, 19)
+}
+
+export function pickPrintTime(...values: Array<string | null | undefined>): string {
+  for (const value of values) {
+    const key = printTimeKey(value)
+    if (key.length >= 10) return key
+  }
+  return ""
+}
+
+/** Окно партий Vekas вокруг даты ЧЗ / нанесения. */
+export function producedFromHint(...values: Array<string | null | undefined>): string | undefined {
+  const key = pickPrintTime(...values)
+  return key.slice(0, 10) || undefined
+}
+
+export function pickRangeCode(children: string[], role: "start" | "end"): string | null {
+  const codes = children.map((code) => String(code || "").trim()).filter(Boolean)
+  if (codes.length === 0) return null
+  return role === "end" ? codes[codes.length - 1] : codes[0]
+}

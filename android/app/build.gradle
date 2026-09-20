@@ -1,0 +1,145 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-kapt'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+android {
+    namespace = "com.scadatable.wms"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.scadatable.wms"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 50
+        versionName "1.5.44-tsd.20260909"
+        buildConfigField "String", "OTA_SIGNING_CERT_SHA256", '"ff32f61c3d304453252ebad93aa6127045b1652c495e9d1a00dc2333155c2d82"'
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        tsd {
+            def keystorePropertiesFile = rootProject.file("keystore.properties")
+            def keystoreProperties = new Properties()
+            if (keystorePropertiesFile.exists()) {
+                keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+            }
+            def configuredStore = System.getenv('TSD_KEYSTORE_FILE') ?:
+                keystoreProperties.getProperty('storeFile', '')
+            if (!configuredStore) {
+                throw new GradleException(
+                    "TSD signing keystore is not configured. Set TSD_KEYSTORE_FILE or storeFile in keystore.properties."
+                )
+            }
+            def store = file(configuredStore)
+            if (!store.exists()) {
+                throw new GradleException(
+                    "TSD signing keystore not found: ${store}. Silent fallback is forbidden because it breaks OTA updates."
+                )
+            }
+            storeFile store
+            storePassword System.getenv('TSD_KEYSTORE_PASSWORD') ?:
+                keystoreProperties.getProperty('storePassword')
+            keyAlias System.getenv('TSD_KEY_ALIAS') ?:
+                keystoreProperties.getProperty('keyAlias')
+            keyPassword System.getenv('TSD_KEY_PASSWORD') ?:
+                keystoreProperties.getProperty('keyPassword')
+            if (!storePassword || !keyAlias || !keyPassword) {
+                throw new GradleException(
+                    "TSD signing credentials are incomplete. Configure passwords and key alias."
+                )
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.tsd
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.tsd
+        }
+    }
+    buildFeatures {
+        compose true
+        buildConfig true
+    }
+    kotlinOptions {
+        jvmTarget = '21'
+    }
+    compileOptions {
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+    }
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.5"
+    
+    // Kotlin
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+    
+    // Compose
+    implementation "androidx.compose.ui:ui:$composeVersion"
+    implementation "androidx.compose.material3:material3:$material3Version"
+    implementation "androidx.compose.material:material-icons-core:$composeVersion"
+    implementation "androidx.compose.material:material-icons-extended:$composeVersion"
+    implementation "androidx.compose.ui:ui-tooling-preview:$composeVersion"
+    implementation "androidx.activity:activity-compose:$androidxActivityVersion"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycleVersion"
+    implementation "androidx.navigation:navigation-compose:$navigationVersion"
+    
+    // Room
+    implementation "androidx.room:room-runtime:$roomVersion"
+    implementation "androidx.room:room-ktx:$roomVersion"
+    kapt "androidx.room:room-compiler:$roomVersion"
+    
+    // DataStore
+    implementation "androidx.datastore:datastore-preferences:$dataStoreVersion"
+    
+    // Networking
+    implementation "com.squareup.retrofit2:retrofit:$retrofitVersion"
+    implementation "com.squareup.retrofit2:converter-gson:$retrofitVersion"
+    implementation "com.squareup.okhttp3:logging-interceptor:4.12.0"
+    implementation "com.google.zxing:core:3.5.3"
+    implementation "androidx.work:work-runtime-ktx:2.10.0"
+
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    // implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    testImplementation "org.robolectric:robolectric:4.14.1"
+    testImplementation "androidx.test:core:1.6.1"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    // implementation project(':capacitor-cordova-android-plugins')
+}
+
+// apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

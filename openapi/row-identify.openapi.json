@@ -1,0 +1,435 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "WMS Row Identify API",
+    "version": "1.0.0",
+    "description": "Идентификация ряда склада ГП по двум бутылкам.\n\nСценарий для внешнего приложения (телефон / ТСД):\n1. Получить токен (`POST /token`) логином WMS.\n2. Открыть карту по `mapUrl` — работает с этим же токеном.\n3. Создать сессию на конкретный ряд (`POST /sessions`).\n4. Сканировать первую бутылку ряда (`role=start`) — WMS пишет дату/время изготовления как начало диапазона.\n5. Сканировать последнюю бутылку ряда (`role=end`) — это конец диапазона.\n6. WMS отбирает коды той же номенклатуры (GTIN), у которых дата изготовления попадает в диапазон, и собирает паллеты этих бутылок.\n7. `POST /sessions/{id}/apply` записывает паллеты в выбранный ряд на 2D-карте.\n\nАвторизация всех методов кроме `/token` и `/openapi`:\n`Authorization: Bearer <mapToken>` или заголовок `X-Map-Token`."
+  },
+  "servers": [
+    { "url": "https://scada25.ru", "description": "production" },
+    { "url": "http://localhost:3000", "description": "local" }
+  ],
+  "tags": [
+    { "name": "Token", "description": "Токен для телефона и карты" },
+    { "name": "Map", "description": "Открытие 2D-карты" },
+    { "name": "Rows", "description": "Справочник рядов карты" },
+    { "name": "AprilTag", "description": "Точки AprilTag с плана: покрытие трёх рядов по углу камеры" },
+    { "name": "Sessions", "description": "Сессия идентификации ряда" }
+  ],
+  "security": [{ "mapToken": [] }],
+  "paths": {
+    "/api/wms/row-identify/openapi": {
+      "get": {
+        "tags": ["Token"],
+        "security": [],
+        "summary": "Скачать этот OpenAPI JSON",
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3.0 JSON",
+            "content": { "application/json": { "schema": { "type": "object" } } }
+          }
+        }
+      }
+    },
+    "/api/wms/row-identify/token": {
+      "post": {
+        "tags": ["Token"],
+        "security": [],
+        "summary": "Выдать токен карты/API",
+        "description": "Либо уже есть сессия WMS (cookie `wms_session` / Bearer accessToken), либо передать `login`+`password`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateTokenRequest" },
+              "examples": {
+                "phoneLogin": {
+                  "value": {
+                    "siteCode": "DEFAULT",
+                    "rowId": "A-33",
+                    "login": "admin",
+                    "password": "secret",
+                    "expiresInSec": 2592000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Токен и ссылки",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateTokenResponse" } } }
+          },
+          "401": { "description": "Нет логина" }
+        }
+      }
+    },
+    "/api/wms/row-identify/open-map": {
+      "get": {
+        "tags": ["Map"],
+        "security": [],
+        "summary": "Открыть карту склада по токену",
+        "description": "302 на `/warehouse-plan/fg/index.html?mapToken=...&row=...`. Эту ссылку открывать с телефона.",
+        "parameters": [
+          { "name": "token", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "row", "in": "query", "schema": { "type": "string", "example": "A-33" } }
+        ],
+        "responses": {
+          "302": { "description": "Redirect на карту" },
+          "401": { "description": "Токен недействителен" }
+        }
+      }
+    },
+    "/api/wms/row-identify/rows": {
+      "get": {
+        "tags": ["Rows"],
+        "summary": "Список рядов 2D-карты",
+        "parameters": [
+          { "name": "query", "in": "query", "schema": { "type": "string", "example": "A-33" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ряды",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RowsResponse" } } }
+          },
+          "401": { "description": "Нет токена" }
+        }
+      }
+    },
+    "/api/wms/row-identify/apriltags": {
+      "get": {
+        "tags": ["AprilTag"],
+        "summary": "Карта AprilTag с плана склада",
+        "description": "Точки, которые отметили на 2D-плане. Один тег покрывает обычно 3 ряда: слева/прямо/справа в камере кара. Печать tag36h11 с полем id.",
+        "parameters": [
+          { "name": "siteCode", "in": "query", "schema": { "type": "string", "example": "DEFAULT" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Семейство и список тегов",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AprilTagMap" },
+                "example": {
+                  "family": "tag36h11",
+                  "defaultSizeM": 0.2,
+                  "tags": [
+                    {
+                      "id": 0,
+                      "zone": "A",
+                      "mode": "pose",
+                      "rows": ["A-33", "A-34", "A-35"],
+                      "bins": [
+                        { "row": "A-33", "azMin": -36, "azMax": -12 },
+                        { "row": "A-34", "azMin": -12, "azMax": 12 },
+                        { "row": "A-35", "azMin": 12, "azMax": 36 }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "description": "Нет токена" }
+        }
+      }
+    },
+    "/api/wms/row-identify/sessions": {
+      "post": {
+        "tags": ["Sessions"],
+        "summary": "Начать идентификацию ряда",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateSessionRequest" },
+              "example": { "siteCode": "DEFAULT", "rowId": "A-33" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Пустая сессия",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RowIdentifySession" } } }
+          }
+        }
+      }
+    },
+    "/api/wms/row-identify/sessions/{id}": {
+      "get": {
+        "tags": ["Sessions"],
+        "summary": "Текущее состояние сессии",
+        "parameters": [{ "$ref": "#/components/parameters/sessionId" }],
+        "responses": {
+          "200": {
+            "description": "Сессия",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RowIdentifySession" } } }
+          },
+          "404": { "description": "Нет сессии" }
+        }
+      }
+    },
+    "/api/wms/row-identify/sessions/{id}/scan": {
+      "post": {
+        "tags": ["Sessions"],
+        "summary": "Сканировать бутылку (начало или конец ряда)",
+        "description": "WMS проверяет код в своей БД и в Честном знаке, берёт дату изготовления. После второго скана сразу считает диапазон, коды и паллеты.",
+        "parameters": [{ "$ref": "#/components/parameters/sessionId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ScanRequest" },
+              "examples": {
+                "start": {
+                  "summary": "Первая бутылка ряда",
+                  "value": { "siteCode": "DEFAULT", "role": "start", "code": "010460701716009121SERIAL01" }
+                },
+                "end": {
+                  "summary": "Последняя бутылка ряда",
+                  "value": { "siteCode": "DEFAULT", "role": "end", "code": "010460701716009121SERIAL99" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Обновлённая сессия",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RowIdentifySession" } } }
+          },
+          "409": { "description": "Разный GTIN у start/end" },
+          "422": { "description": "Нет даты изготовления" }
+        }
+      }
+    },
+    "/api/wms/row-identify/sessions/{id}/resolve": {
+      "post": {
+        "tags": ["Sessions"],
+        "summary": "Пересчитать коды и паллеты по уже заданному диапазону",
+        "parameters": [{ "$ref": "#/components/parameters/sessionId" }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "properties": { "siteCode": { "type": "string" } } }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Сессия с кодами и паллетами",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RowIdentifySession" } } }
+          },
+          "409": { "description": "Ещё нет обоих сканов" }
+        }
+      }
+    },
+    "/api/wms/row-identify/sessions/{id}/apply": {
+      "post": {
+        "tags": ["Sessions"],
+        "summary": "Записать найденные паллеты в ряд на карте",
+        "parameters": [{ "$ref": "#/components/parameters/sessionId" }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ApplyRequest" },
+              "example": { "siteCode": "DEFAULT", "rowId": "A-33" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Паллеты записаны в plan-inventory",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RowIdentifySession" } } }
+          },
+          "409": { "description": "Нет паллет или не хватает мест в ряду" }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "mapToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "HMAC",
+        "description": "Токен из POST /api/wms/row-identify/token. Можно также передать в заголовке X-Map-Token."
+      }
+    },
+    "parameters": {
+      "sessionId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      }
+    },
+    "schemas": {
+      "CreateTokenRequest": {
+        "type": "object",
+        "properties": {
+          "siteCode": { "type": "string", "default": "DEFAULT" },
+          "rowId": { "type": "string", "example": "A-33", "description": "Ряд карты, который откроется сразу" },
+          "login": { "type": "string" },
+          "password": { "type": "string" },
+          "expiresInSec": { "type": "integer", "default": 2592000, "minimum": 300, "maximum": 15552000 }
+        }
+      },
+      "CreateTokenResponse": {
+        "type": "object",
+        "required": ["token", "tokenType", "expiresAt", "mapUrl", "planUrl"],
+        "properties": {
+          "token": { "type": "string" },
+          "tokenType": { "type": "string", "example": "Bearer" },
+          "expiresAt": { "type": "string", "format": "date-time" },
+          "siteCode": { "type": "string" },
+          "rowId": { "type": "string", "nullable": true },
+          "mapUrl": { "type": "string", "format": "uri", "description": "Открыть карту с телефона" },
+          "planUrl": { "type": "string", "format": "uri" },
+          "openapiUrl": { "type": "string", "format": "uri" }
+        }
+      },
+      "CreateSessionRequest": {
+        "type": "object",
+        "properties": {
+          "siteCode": { "type": "string", "default": "DEFAULT" },
+          "rowId": { "type": "string", "example": "A-33" }
+        }
+      },
+      "ScanRequest": {
+        "type": "object",
+        "required": ["code", "role"],
+        "properties": {
+          "siteCode": { "type": "string" },
+          "role": { "type": "string", "enum": ["start", "end"] },
+          "code": { "type": "string", "description": "DataMatrix / КИ бутылки. Запятые и криптохвост не вырезать." }
+        }
+      },
+      "ApplyRequest": {
+        "type": "object",
+        "properties": {
+          "siteCode": { "type": "string" },
+          "rowId": { "type": "string", "description": "Если не задан — берётся rowId сессии или токена" }
+        }
+      },
+      "RowsResponse": {
+        "type": "object",
+        "properties": {
+          "total": { "type": "integer" },
+          "rows": { "type": "array", "items": { "$ref": "#/components/schemas/PlanRow" } }
+        }
+      },
+      "AprilTagMap": {
+        "type": "object",
+        "properties": {
+          "family": { "type": "string", "example": "tag36h11" },
+          "defaultSizeM": { "type": "number" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "integer", "description": "ID для генератора tag36h11" },
+                "zone": { "type": "string" },
+                "mode": { "type": "string", "enum": ["pose", "direct"] },
+                "rows": { "type": "array", "items": { "type": "string" }, "description": "Слева / прямо / справа в камере" },
+                "bins": { "type": "array", "items": { "type": "object" } }
+              }
+            }
+          }
+        }
+      },
+      "PlanRow": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "example": "A-33" },
+          "zone": { "type": "string" },
+          "number": { "type": "string" },
+          "group": { "type": "string", "nullable": true },
+          "capacity": { "type": "integer" },
+          "sections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": { "type": "string" },
+                "label": { "type": "string" },
+                "count": { "type": "integer" }
+              }
+            }
+          }
+        }
+      },
+      "ScannedCode": {
+        "type": "object",
+        "properties": {
+          "role": { "type": "string", "enum": ["start", "end"] },
+          "rawCode": { "type": "string" },
+          "normalizedCode": { "type": "string" },
+          "gtin": { "type": "string", "nullable": true },
+          "serial": { "type": "string", "nullable": true },
+          "productionAt": { "type": "string", "format": "date-time" },
+          "source": { "type": "string", "enum": ["wms", "crpt"] },
+          "itemCode": { "type": "string", "nullable": true },
+          "itemName": { "type": "string", "nullable": true }
+        }
+      },
+      "MatchedCode": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "gtin": { "type": "string", "nullable": true },
+          "serial": { "type": "string", "nullable": true },
+          "productionAt": { "type": "string", "format": "date-time", "nullable": true },
+          "itemCode": { "type": "string", "nullable": true },
+          "itemName": { "type": "string", "nullable": true },
+          "palletCode": { "type": "string", "nullable": true }
+        }
+      },
+      "MatchedPallet": {
+        "type": "object",
+        "properties": {
+          "index": { "type": "integer", "description": "Порядок в ряду, с 1", "example": 1 },
+          "palletId": { "type": "string", "example": "00346070171612884291" },
+          "palletCode": { "type": "string", "example": "00346070171612884291" },
+          "itemCode": { "type": "string", "nullable": true },
+          "itemName": { "type": "string", "nullable": true },
+          "gtin": { "type": "string", "nullable": true },
+          "batchNumber": { "type": "string", "nullable": true, "example": "280826SA" },
+          "productionDate": { "type": "string", "nullable": true },
+          "bottles": { "type": "integer", "description": "Бутылок на палете", "example": 84 },
+          "address": { "type": "string", "description": "Адрес ячейки на карте после apply" }
+        }
+      },
+      "RowIdentifySession": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "siteCode": { "type": "string" },
+          "rowId": { "type": "string", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" },
+          "start": { "allOf": [{ "$ref": "#/components/schemas/ScannedCode" }], "nullable": true },
+          "end": { "allOf": [{ "$ref": "#/components/schemas/ScannedCode" }], "nullable": true },
+          "rangeFrom": { "type": "string", "nullable": true, "example": "2026-08-28T20:47:16" },
+          "rangeTo": { "type": "string", "nullable": true, "example": "2026-08-29T03:22:19" },
+          "itemCode": { "type": "string", "nullable": true },
+          "itemName": { "type": "string", "nullable": true },
+          "gtin": { "type": "string", "nullable": true },
+          "palletCount": { "type": "integer", "description": "Сколько палет попало в диапазон. Сверять с фактом в ряду.", "example": 50 },
+          "bottleCount": { "type": "integer", "description": "Сумма bottles по палетам", "example": 4200 },
+          "codeCount": { "type": "integer", "description": "Сколько бутылок в диапазоне печати" },
+          "codes": { "type": "array", "description": "Образцы кодов (не полный список)", "items": { "$ref": "#/components/schemas/MatchedCode" } },
+          "pallets": {
+            "type": "array",
+            "description": "Полный список палет по порядку ряда. Длина = palletCount.",
+            "items": { "$ref": "#/components/schemas/MatchedPallet" }
+          },
+          "appliedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "appliedAddresses": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

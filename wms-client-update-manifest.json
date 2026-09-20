@@ -1,0 +1,24 @@
+{
+    "kind":  "wms-client-update",
+    "buildId":  "rel-2026-05-29-1518",
+    "builtAt":  "2026-05-29T05:18:34.6394324Z",
+    "package":  "scadatable-wms-client-update-2026-05-29-1518.tar.gz",
+    "requiredFiles":  [
+                          "package.json",
+                          "app/layout.tsx",
+                          "app/(dashboard)/page.tsx",
+                          "app/(dashboard)/receiving/page.tsx",
+                          "app/(dashboard)/movement/page.tsx",
+                          "app/(dashboard)/issue/page.tsx",
+                          "components/wms/receiving-operator-page.tsx",
+                          "components/wms/issue-operator-page.tsx",
+                          "lib/wms-api.ts",
+                          "lib/storage-slot-ui.ts",
+                          "lib/server/bootstrap-update-scripts.ts",
+                          "scripts/apply-wms-update.mjs",
+                          "scripts/apply-wms-update-10.26.sh",
+                          "scripts/restart-wms-ui-10.26.sh",
+                          "scripts/smoke-wms-client.mjs",
+                          "scripts/wms-db-preflight.mjs"
+                      ]
+}

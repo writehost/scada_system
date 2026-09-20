@@ -1,0 +1,709 @@
+/*
+ * Слой симуляции погрузчиков над планом склада ГП.
+ * Живёт внутри .planStage, поэтому наследует пан/зум плана и работает
+ * в его системе координат (viewBox 0 0 3503 2562).
+ *
+ * Палитра взята из основного приложения плана: slate-текст #172033,
+ * синий #0e74d2 (ряды), фиолетовый #7c3aed (AprilTag), красный #e11d2e.
+ * Погрузчикам отведён янтарный #d97706 — под цвет самой кары.
+ */
+
+.flLayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.flLayerEditing {
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+/* ---------- Ребра маршрута ---------- */
+
+.flEdge {
+  fill: none;
+  stroke: #d97706;
+  stroke-width: 2.5;
+  stroke-opacity: 0.75;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  /* Клики должна принимать только широкая .flEdgeHit под линией. */
+  pointer-events: none;
+}
+
+.flEdgeHint {
+  fill: none;
+  stroke: #d97706;
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  stroke-opacity: 0.9;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.flEdgeHit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 14;
+  vector-effect: non-scaling-stroke;
+}
+
+.flLayerEditing .flEdgeHit {
+  cursor: pointer;
+}
+
+.flFleetRoute {
+  fill: none;
+  stroke-width: 2.4;
+  stroke-opacity: 0.85;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 8 5;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.flFleetCaptionText,
+.flLoadPointLabel {
+  fill: #172033;
+  font-size: 11px;
+  font-weight: 700;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 3px;
+}
+
+.flLoadPointBadge {
+  fill: #0e74d2;
+  stroke: #ffffff;
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+}
+
+/* ---------- Точки маршрута ---------- */
+
+.flNodeBody {
+  stroke: #ffffff;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.flNode[data-kind="way"] .flNodeBody {
+  fill: #64748b;
+}
+
+.flNode[data-kind="pickup"] .flNodeBody {
+  fill: #0e74d2;
+}
+
+.flNode[data-kind="drop"] .flNodeBody {
+  fill: #e11d2e;
+}
+
+.flNode[data-kind="resume"] .flNodeBody {
+  fill: #d97706;
+}
+
+.flNode.flNodeSelected .flNodeBody {
+  stroke: #172033;
+  stroke-width: 2.6;
+}
+
+.flNode.flNodeTrip .flNodeBody {
+  stroke: #ea580c;
+  stroke-width: 2.8;
+}
+
+.flNodeGlyph {
+  fill: #ffffff;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-size: 9px;
+  font-weight: 800;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  user-select: none;
+}
+
+.flNodeLabel {
+  fill: #334155;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: #ffffffd9;
+  stroke-width: 3;
+  pointer-events: none;
+  user-select: none;
+}
+
+.flLayerEditing .flNodeHit {
+  cursor: grab;
+}
+
+.flLayerEditing .flNodeHit:active {
+  cursor: grabbing;
+}
+
+.flNodeHit {
+  fill: transparent;
+}
+
+/* ---------- Погрузчик ---------- */
+
+.flScanCone {
+  fill: #22c55e;
+  fill-opacity: 0.16;
+  stroke: #16a34a;
+  stroke-width: 1;
+  stroke-opacity: 0.55;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+.flUnitSprite {
+  pointer-events: none;
+  image-rendering: auto;
+}
+
+.flCargo {
+  fill: #b45309;
+  stroke: #78350f;
+  stroke-width: 0.6;
+  pointer-events: none;
+}
+
+.flUnitTag {
+  fill: #78350f;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  font-size: 8px;
+  font-weight: 800;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: #ffffffe0;
+  stroke-width: 2.6;
+  pointer-events: none;
+  user-select: none;
+}
+
+.flTagHit {
+  fill: none;
+  stroke: #16a34a;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* ---------- Кнопка в панели управления планом ---------- */
+
+.mapControls .flToolButton {
+  font-size: 12px;
+}
+
+.mapControls .flToolButton.active {
+  border-color: #d97706;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* ---------- Панель ---------- */
+
+.flPanelHost {
+  position: absolute;
+  inset: 0;
+  z-index: 21;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 16px 16px 16px;
+  pointer-events: none;
+}
+
+.flPanel {
+  pointer-events: auto;
+  width: min(372px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #d9e0e8;
+  border-radius: 14px;
+  background: #fffffffa;
+  box-shadow: 0 18px 60px #0f172a38;
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  color: #172033;
+  cursor: default;
+}
+
+.flPanelHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid #e7ebf0;
+}
+
+.flPanelHeader .flEyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: #718096;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.flPanelHeader h2 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.25;
+  color: #111827;
+}
+
+.flPanelHeader p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.flCloseButton {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #475569;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.flCloseButton:hover {
+  border-color: #64748b;
+  background: #f8fafc;
+}
+
+.flRunBar {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #e7ebf0;
+  background: #fcfdfe;
+}
+
+.flRunBar button {
+  flex: 1;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.flRunBar button:hover {
+  border-color: #64748b;
+  background: #f8fafc;
+}
+
+.flRunBar .flRunPrimary {
+  border-color: #d97706;
+  background: #d97706;
+  color: #fff;
+}
+
+.flRunBar .flRunPrimary:hover {
+  border-color: #b45309;
+  background: #b45309;
+}
+
+.flRunBar button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.flTabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px 0;
+}
+
+.flTabs button {
+  flex: 1;
+  padding: 7px 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.flTabs button.active {
+  border-color: #d97706;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.flPanelBody {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 16px 14px;
+}
+
+.flSection + .flSection {
+  margin-top: 14px;
+}
+
+.flSectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.flSectionHead h3 {
+  margin: 0;
+  color: #253044;
+  font-size: 12px;
+}
+
+.flSectionHead span {
+  color: #718096;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.flModeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.flModeButton {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.flModeButton:hover {
+  border-color: #94a3b8;
+  background: #fff;
+}
+
+.flModeButton.active {
+  border-color: #d97706;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.flDot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 0 1px #cbd5e1;
+}
+
+.flDotWay {
+  background: #64748b;
+}
+
+.flDotPickup {
+  background: #0e74d2;
+}
+
+.flDotDrop {
+  background: #e11d2e;
+}
+
+.flDotResume {
+  background: #d97706;
+}
+
+.flDotLink {
+  background: linear-gradient(90deg, #d97706 50%, #64748b 50%);
+}
+
+.flDotMove {
+  background: #0f766e;
+}
+
+.flDotErase {
+  background: #b91c1c;
+}
+
+.flHint {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.flField {
+  margin-top: 10px;
+}
+
+.flField label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.flField label b {
+  color: #92400e;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.flField input[type="range"] {
+  width: 100%;
+  accent-color: #d97706;
+}
+
+.flField input[type="number"],
+.flField select {
+  width: 100%;
+  padding: 7px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #fff;
+  color: #172033;
+  font-size: 12px;
+}
+
+.flCheckRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.flCheckRow input {
+  accent-color: #d97706;
+}
+
+.flUnitList {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.flUnitList li {
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.flUnitHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #92400e;
+}
+
+.flUnitHead span {
+  flex: 1;
+  color: #64748b;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.flUnitHead .flUnitToggle {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.flUnitHead .flUnitToggle.on {
+  color: #15803d;
+}
+
+.flCountList {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.flCountList li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.flCountList li b {
+  margin-left: auto;
+  color: #172033;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.flWide {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.flScanList {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 5px;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.flScanList li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 11px;
+}
+
+.flScanList li b {
+  color: #15803d;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.flScanList li span {
+  flex: 1;
+  color: #475569;
+}
+
+.flScanList li i {
+  color: #94a3b8;
+  font-style: normal;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.flEmpty {
+  margin: 8px 0 0;
+  padding: 12px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.flPanelFooter {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 14px;
+  border-top: 1px solid #e7ebf0;
+}
+
+.flPrimary,
+.flSecondary {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.flPrimary {
+  border: 1px solid #d97706;
+  background: #d97706;
+  color: #fff;
+}
+
+.flPrimary:hover:not(:disabled) {
+  border-color: #b45309;
+  background: #b45309;
+}
+
+.flPrimary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.flSecondary {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+}
+
+.flSecondary:hover {
+  border-color: #64748b;
+  background: #f8fafc;
+}
+
+.flMessage {
+  margin: 10px 0 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0f766e;
+  line-height: 1.45;
+}
+
+.flMessage.error {
+  color: #b91c1c;
+}
+
+@media (max-width: 700px) {
+  .flPanelHost {
+    padding: 10px;
+  }
+
+  .flPanel {
+    width: 100%;
+    max-height: 72%;
+  }
+}

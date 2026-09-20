@@ -1,0 +1,358 @@
+.gridStage {
+  position: relative;
+}
+
+.grid {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1536px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.cellWrap {
+  position: relative;
+  z-index: 0;
+  --cell-radius: 1rem;
+}
+
+.cellGlowWrap {
+  position: relative;
+  display: block;
+}
+
+.cellWrapInProduction {
+  z-index: 1;
+}
+
+.cellGlowInner {
+  position: relative;
+  border-radius: var(--cell-radius);
+}
+
+.productionGlowOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  border-radius: inherit;
+  pointer-events: none;
+  border: 2px solid color-mix(in oklch, var(--primary) 55%, transparent);
+}
+
+.productionGlowOverlayCss {
+  /* no pulse / glow */
+}
+
+.cardHanded {
+  border-color: color-mix(in oklch, var(--primary) 40%, var(--border));
+}
+
+.cellWrapOccupied {
+  z-index: 1;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  min-height: 10rem;
+  overflow: hidden;
+  border-radius: var(--cell-radius);
+  border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+  background: var(--card);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.cardEmpty {
+  border-style: dashed;
+  border-color: color-mix(in oklch, var(--border) 50%, transparent);
+  background: color-mix(in oklch, var(--muted) 8%, var(--card));
+}
+
+.cardOccupied::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: var(--cell-radius) 0 0 var(--cell-radius);
+  background: color-mix(in oklch, var(--primary) 70%, var(--border));
+}
+
+.cardHanded::before {
+  background: var(--primary);
+}
+
+.productionBadge {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.22rem 0.55rem 0.22rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+.productionBadgeDot {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--primary-foreground);
+}
+
+.cellCode {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.28rem 0.62rem;
+  border-radius: 999px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.cellCodeBeige {
+  color: var(--foreground);
+  background: color-mix(in oklch, var(--secondary) 80%, var(--background));
+  border: 1px solid color-mix(in oklch, var(--border) 65%, transparent);
+}
+
+.cellCodeProduction {
+  color: var(--primary-foreground);
+  background: var(--primary);
+  border: 1px solid color-mix(in oklch, var(--primary) 70%, var(--foreground));
+}
+
+.cellHeaderRow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  max-width: 100%;
+  min-width: 0;
+  line-height: 1.1;
+}
+
+.cellProductionInline {
+  flex-shrink: 0;
+  padding: 0.16rem 0.38rem;
+  border-radius: 999px;
+  font-size: 0.54rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--foreground);
+  background: color-mix(in oklch, var(--muted) 55%, var(--background));
+  border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+}
+
+.cellExpiredBadge {
+  flex-shrink: 0;
+  padding: 0.18rem 0.42rem;
+  border-radius: 999px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #fff;
+  background: var(--destructive);
+  border: 1px solid color-mix(in oklch, var(--destructive) 80%, #000);
+}
+
+.cellWrapExpired {
+  z-index: 1;
+}
+
+.cardExpired {
+  border-color: color-mix(in oklch, var(--destructive) 55%, var(--border)) !important;
+}
+
+.cardExpired::before {
+  background: var(--destructive) !important;
+}
+
+.cellCodeExpired {
+  color: var(--destructive) !important;
+  border-color: color-mix(in oklch, var(--destructive) 40%, transparent) !important;
+  background: color-mix(in oklch, var(--destructive) 8%, var(--background)) !important;
+}
+
+.metaBlockExpired {
+  background: color-mix(in oklch, var(--destructive) 8%, var(--background));
+  border-color: color-mix(in oklch, var(--destructive) 25%, transparent);
+}
+
+.metaValueExpired {
+  color: var(--destructive);
+  font-weight: 800;
+}
+
+.cardEmpty .cellCode {
+  color: var(--muted-foreground);
+  background: color-mix(in oklch, var(--background) 75%, var(--secondary));
+  border-color: color-mix(in oklch, var(--border) 42%, transparent);
+}
+
+.emptyHint {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--muted-foreground);
+}
+
+.itemName {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--foreground);
+}
+
+.metaBlock {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem 0.5rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+  background: color-mix(in oklch, var(--muted) 12%, var(--card));
+}
+
+.metaLabel {
+  display: block;
+  font-size: 0.62rem;
+  line-height: 1.1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.metaValue {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.actionBtns {
+  position: absolute;
+  right: 0.5rem;
+  top: 0.5rem;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.18rem;
+  border-radius: 0.7rem;
+  background: var(--card);
+  border: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+}
+
+.actionBtn {
+  height: 1.85rem;
+  width: 1.85rem;
+  border-radius: 0.55rem;
+}
+
+.consumeBtn {
+  background: color-mix(in oklch, var(--foreground) 4%, var(--card));
+  color: var(--foreground);
+  border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+}
+
+.consumeBtn:hover {
+  background: color-mix(in oklch, var(--primary) 12%, var(--card));
+  border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+}
+
+.writeoffBtn {
+  background: color-mix(in oklch, var(--destructive) 6%, var(--card));
+  color: var(--destructive);
+  border: 1px solid color-mix(in oklch, var(--destructive) 25%, var(--border));
+}
+
+.writeoffBtn:hover {
+  background: color-mix(in oklch, var(--destructive) 14%, var(--card));
+}
+
+.returnBtn {
+  background: color-mix(in oklch, var(--foreground) 4%, var(--card));
+  color: color-mix(in oklch, var(--foreground) 75%, transparent);
+  border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+}
+
+.returnBtn:hover {
+  background: color-mix(in oklch, var(--muted) 45%, var(--card));
+}
+
+.addBtnEmpty {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+}
+
+.addBtnFilled {
+  background: color-mix(in oklch, var(--background) 92%, transparent);
+  color: var(--foreground);
+  border: 1px solid color-mix(in oklch, var(--border) 65%, transparent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cellWrap:hover {
+    z-index: 2;
+  }
+
+  .cellWrap:hover .card {
+    border-color: color-mix(in oklch, var(--primary) 40%, var(--border));
+    background: color-mix(in oklch, var(--primary) 4%, var(--card));
+  }
+
+  .cellWrapExpired:hover .card {
+    border-color: color-mix(in oklch, var(--destructive) 55%, var(--border));
+    background: color-mix(in oklch, var(--destructive) 4%, var(--card));
+  }
+
+  .cellWrap:hover .itemName {
+    -webkit-line-clamp: unset;
+    display: block;
+    overflow: visible;
+  }
+}

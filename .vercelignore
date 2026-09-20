@@ -1,0 +1,41 @@
+# Capacitor / Android (local build artifacts ~500MB+; not used on Vercel)
+android/
+capacitor-assets/
+.next-tsd-export/
+capacitor.config.js
+
+# Local build output and deps (Vercel installs/builds fresh)
+.next/
+node_modules/
+
+# Secrets and local env
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Mobile / native tooling scripts (not needed for web preview)
+scripts/build-tsd-android.mjs
+scripts/cap-sync-*.mjs
+scripts/android-build-standalone.mjs
+scripts/e2e-wms-pages.mjs
+scripts/backfill-sku.mjs
+
+# Parent-repo staging used by prebuild-fix (not in interface tree on Vercel)
+.wms-update-staging/
+
+# Playwright / test artifacts
+playwright-report/
+test-results/
+coverage/
+
+# Keystores and APK outputs
+*.apk
+*.aab
+*.keystore
+*.jks

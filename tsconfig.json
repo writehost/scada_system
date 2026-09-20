@@ -1,0 +1,80 @@
+{
+  "compilerOptions": {
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "target": "ES6",
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/components/wms/virtual/*": [
+        "./components/wms/virtual/*"
+      ],
+      "@/components/wms/wms-pickers": [
+        "./components/wms/wms-pickers.tsx",
+        "../Backend/web/components/wms/wms-pickers.tsx"
+      ],
+      "@/components/wms/wms-item-create-form": [
+        "./components/wms/wms-item-create-form.tsx",
+        "../Backend/web/components/wms/wms-item-create-form.tsx"
+      ],
+      "@/components/wms/wms-shared": [
+        "./components/wms/wms-shared.tsx",
+        "../Backend/web/components/wms/wms-shared.tsx"
+      ],
+      "@/components/wms/receiving-missing-cell-offer": [
+        "./components/wms/receiving-missing-cell-offer.tsx",
+        "../Backend/web/components/wms/receiving-missing-cell-offer.tsx"
+      ],
+      "@/lib/receiving-missing-cell": [
+        "./lib/receiving-missing-cell.ts",
+        "../Backend/web/lib/receiving-missing-cell.ts"
+      ],
+      "@/components/nav/*": [
+        "./components/nav/*",
+        "../Backend/web/components/nav/*"
+      ],
+      "@/components/ui/focus-modal": [
+        "./components/ui/focus-modal.tsx",
+        "../Backend/web/components/ui/focus-modal.tsx"
+      ],
+      "@/lib/wms/*": [
+        "./lib/wms/*",
+        "../Backend/web/lib/wms/*"
+      ],
+      "@/lib/prefs": [
+        "./lib/prefs.ts",
+        "../Backend/web/lib/prefs.ts"
+      ],
+      "@/*": [
+        "./*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

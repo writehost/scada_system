@@ -1,0 +1,588 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: oklch(0.96 0.01 90);
+  --foreground: oklch(0.25 0.04 145);
+  --card: oklch(0.995 0 0);
+  --card-foreground: oklch(0.25 0.04 145);
+  --popover: oklch(0.995 0 0);
+  --popover-foreground: oklch(0.25 0.04 145);
+  --primary: oklch(0.83 0.18 115);
+  --primary-foreground: oklch(0.25 0.04 145);
+  --secondary: oklch(0.92 0.02 90);
+  --secondary-foreground: oklch(0.35 0.04 145);
+  --muted: oklch(0.92 0.02 90);
+  --muted-foreground: oklch(0.45 0.02 145);
+  --accent: oklch(0.83 0.18 115);
+  --accent-foreground: oklch(0.25 0.04 145);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.88 0.02 90);
+  --input: oklch(0.92 0.02 90);
+  --ring: oklch(0.83 0.18 115);
+  --chart-1: oklch(0.83 0.18 115);
+  --chart-2: oklch(0.55 0.12 250);
+  --chart-3: oklch(0.7 0.15 55);
+  --chart-4: oklch(0.55 0.2 25);
+  --chart-5: oklch(0.6 0.15 320);
+  --radius: 1rem;
+  --sidebar: oklch(0.995 0 0);
+  --sidebar-foreground: oklch(0.25 0.04 145);
+  --sidebar-primary: oklch(0.83 0.18 115);
+  --sidebar-primary-foreground: oklch(0.25 0.04 145);
+  --sidebar-accent: oklch(0.94 0.02 90);
+  --sidebar-accent-foreground: oklch(0.25 0.04 145);
+  --sidebar-border: oklch(0.9 0.02 90);
+  --sidebar-ring: oklch(0.83 0.18 115);
+  
+  --warning: oklch(0.7 0.15 55);
+  --warning-foreground: oklch(0.3 0.05 55);
+  --success: oklch(0.6 0.15 145);
+  --success-foreground: oklch(0.98 0 0);
+}
+
+.dark {
+  --background: oklch(0.18 0.02 145);
+  --foreground: oklch(0.95 0.01 90);
+  --card: oklch(0.22 0.02 145);
+  --card-foreground: oklch(0.95 0.01 90);
+  --popover: oklch(0.22 0.02 145);
+  --popover-foreground: oklch(0.95 0.01 90);
+  --primary: oklch(0.83 0.18 115);
+  --primary-foreground: oklch(0.2 0.04 145);
+  --secondary: oklch(0.26 0.02 145);
+  --secondary-foreground: oklch(0.9 0.01 90);
+  --muted: oklch(0.26 0.02 145);
+  --muted-foreground: oklch(0.6 0.02 90);
+  --accent: oklch(0.83 0.18 115);
+  --accent-foreground: oklch(0.2 0.04 145);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.3 0.02 145);
+  --input: oklch(0.26 0.02 145);
+  --ring: oklch(0.83 0.18 115);
+  --chart-1: oklch(0.83 0.18 115);
+  --chart-2: oklch(0.6 0.12 250);
+  --chart-3: oklch(0.75 0.15 55);
+  --chart-4: oklch(0.6 0.2 25);
+  --chart-5: oklch(0.65 0.15 320);
+  --sidebar: oklch(0.15 0.02 145);
+  --sidebar-foreground: oklch(0.95 0.01 90);
+  --sidebar-primary: oklch(0.83 0.18 115);
+  --sidebar-primary-foreground: oklch(0.2 0.04 145);
+  --sidebar-accent: oklch(0.22 0.02 145);
+  --sidebar-accent-foreground: oklch(0.95 0.01 90);
+  --sidebar-border: oklch(0.28 0.02 145);
+  --sidebar-ring: oklch(0.83 0.18 115);
+  
+  --warning: oklch(0.75 0.15 55);
+  --warning-foreground: oklch(0.25 0.05 55);
+  --success: oklch(0.65 0.15 145);
+  --success-foreground: oklch(0.98 0 0);
+}
+
+@theme inline {
+  --font-sans: 'Inter', 'Inter Fallback', sans-serif;
+  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.82 0.02 90 / 0.9) oklch(0.96 0.01 90 / 0.5);
+  }
+  html::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+  html::-webkit-scrollbar-track {
+    background: oklch(0.96 0.01 90 / 0.35);
+    border-radius: 9999px;
+  }
+  html::-webkit-scrollbar-thumb {
+    background: oklch(0.78 0.02 90 / 0.85);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  html::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.7 0.03 90 / 0.95);
+    background-clip: padding-box;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  .overflow-auto,
+  .overflow-x-auto,
+  .overflow-y-auto,
+  .overflow-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: oklch(0.82 0.02 90 / 0.85) oklch(0.96 0.01 90 / 0.4);
+  }
+  .overflow-auto::-webkit-scrollbar,
+  .overflow-x-auto::-webkit-scrollbar,
+  .overflow-y-auto::-webkit-scrollbar,
+  .overflow-scroll::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .overflow-auto::-webkit-scrollbar-thumb,
+  .overflow-x-auto::-webkit-scrollbar-thumb,
+  .overflow-y-auto::-webkit-scrollbar-thumb,
+  .overflow-scroll::-webkit-scrollbar-thumb {
+    background: oklch(0.78 0.02 90 / 0.75);
+    border-radius: 9999px;
+  }
+}
+
+/* Печать формы КО-1: только область #ko1-print-area */
+@media print {
+  @page {
+    size: landscape;
+    margin: 8mm;
+  }
+  html.ko1-printing body * {
+    visibility: hidden;
+  }
+  html.ko1-printing #ko1-print-area,
+  html.ko1-printing #ko1-print-area * {
+    visibility: visible;
+  }
+  html.ko1-printing #ko1-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 8mm;
+    background: white !important;
+  }
+}
+
+/* Печать ТОРГ-1: только бланк #torg1-print-area */
+@media print {
+  html.torg1-printing {
+    background: white !important;
+  }
+  html.torg1-printing body * {
+    visibility: hidden !important;
+  }
+  html.torg1-printing #torg1-print-area,
+  html.torg1-printing #torg1-print-area * {
+    visibility: visible !important;
+  }
+  html.torg1-printing #torg1-print-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 10mm !important;
+    overflow: visible !important;
+    background: white !important;
+    border: none !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  html.torg1-printing #torg1-print-area .torg1-sheet {
+    box-shadow: none !important;
+    padding: 0 !important;
+    font-family: Arial, "Helvetica Neue", Helvetica, sans-serif !important;
+  }
+  html.torg1-printing #torg1-print-area .torg1-blank-print-only {
+    display: block !important;
+  }
+  html.torg1-printing #torg1-print-area .torg1-line-input {
+    border: none !important;
+    border-bottom: 1px solid #000 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    color: #000 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+  html.torg1-printing #torg1-print-area button {
+    display: none !important;
+  }
+}
+
+@page torg1 {
+  size: A4 portrait;
+  margin: 10mm;
+}
+
+html.torg1-printing {
+  /* used by @media print above */
+}
+
+/* Бланк стр.1 ТОРГ-1: на экране скрыт (узкая панель), при печати через html.torg1-printing — виден */
+.torg1-blank-print-only {
+  display: none;
+}
+
+/* ТСД (Capacitor /mobile): принудительно светлая палитра WMS, без тёмной темы */
+.tsd-light-root {
+  color-scheme: light only;
+}
+.tsd-light-root,
+.tsd-light-root.dark {
+  --background: oklch(0.96 0.01 90);
+  --foreground: oklch(0.25 0.04 145);
+  --card: oklch(0.995 0 0);
+  --card-foreground: oklch(0.25 0.04 145);
+  --popover: oklch(0.995 0 0);
+  --popover-foreground: oklch(0.25 0.04 145);
+  --primary: oklch(0.83 0.18 115);
+  --primary-foreground: oklch(0.25 0.04 145);
+  --secondary: oklch(0.92 0.02 90);
+  --secondary-foreground: oklch(0.35 0.04 145);
+  --muted: oklch(0.92 0.02 90);
+  --muted-foreground: oklch(0.45 0.02 145);
+  --accent: oklch(0.83 0.18 115);
+  --accent-foreground: oklch(0.25 0.04 145);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.88 0.02 90);
+  --input: oklch(0.92 0.02 90);
+  --ring: oklch(0.83 0.18 115);
+}
+
+/* Промышленные WMS-панели: карточки, таблицы, фильтры */
+@layer components {
+  .wms-panel {
+    @apply overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm;
+  }
+  .wms-panel-header {
+    @apply border-b border-border px-4 py-3;
+  }
+  .wms-panel-title {
+    @apply text-sm font-semibold tracking-tight text-foreground;
+  }
+  .wms-panel-subtitle {
+    @apply mt-0.5 text-xs leading-relaxed text-muted-foreground;
+  }
+  .wms-filter-bar {
+    @apply flex flex-wrap items-end gap-3 rounded-2xl border border-border/70 bg-card p-4 shadow-sm;
+  }
+  .wms-metric-card {
+    @apply rounded-2xl border border-border/70 bg-card p-4 shadow-sm;
+  }
+  .wms-metric-label {
+    @apply text-xs font-medium uppercase tracking-wide text-muted-foreground;
+  }
+  .wms-metric-value {
+    @apply mt-1 text-2xl font-semibold tabular-nums text-foreground;
+  }
+
+  /* AG Grid–подобный data grid для складских таблиц */
+  .wms-ag-grid {
+    @apply w-full min-w-[1080px] border-collapse text-[13px] leading-snug;
+  }
+  .wms-ag-grid thead th {
+    @apply border-b border-r border-border/80 bg-muted/70 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground last:border-r-0;
+  }
+  .wms-ag-grid thead th.wms-ag-sortable {
+    @apply cursor-pointer select-none transition-colors hover:bg-muted hover:text-foreground;
+  }
+  .wms-ag-grid tbody td {
+    @apply border-b border-r border-border/50 px-3 py-2 align-middle last:border-r-0;
+  }
+  .wms-ag-grid tbody tr.wms-ag-row {
+    @apply bg-card transition-colors;
+  }
+  .wms-ag-grid tbody tr.wms-ag-row:hover {
+    @apply bg-accent/25;
+  }
+  .wms-ag-grid tbody tr.wms-ag-row:nth-child(even):not(.wms-ag-row--warn):not(.wms-ag-row--critical) {
+    @apply bg-muted/25;
+  }
+  .wms-ag-grid tbody tr.wms-ag-row:nth-child(even):not(.wms-ag-row--warn):not(.wms-ag-row--critical):hover {
+    @apply bg-accent/30;
+  }
+  .wms-ag-grid tbody tr.wms-ag-row--warn {
+    @apply bg-sky-500/10 hover:bg-sky-500/15;
+  }
+  .wms-ag-grid tbody tr.wms-ag-row--critical {
+    @apply bg-destructive/10 hover:bg-destructive/15;
+  }
+  .wms-ag-cell-num {
+    @apply text-right tabular-nums;
+  }
+  .wms-ag-status {
+    @apply inline-flex items-center rounded-md border border-border/70 bg-background px-1.5 py-0.5 text-[11px] font-medium leading-none;
+  }
+
+.wms-ag-grid thead th.wms-ag-sticky-name,
+.wms-ag-grid tbody td.wms-ag-sticky-name {
+  position: sticky;
+  left: 0;
+}
+.wms-ag-grid thead th.wms-ag-sticky-name {
+  z-index: 20;
+  background-color: color-mix(in oklab, var(--muted) 88%, white);
+  box-shadow: 4px 0 8px -6px rgb(15 23 42 / 0.35);
+}
+.wms-ag-grid tbody td.wms-ag-sticky-name {
+  z-index: 2;
+  background-color: var(--card);
+  box-shadow: 4px 0 8px -6px rgb(15 23 42 / 0.35);
+}
+.wms-ag-grid tbody tr.wms-ag-row:nth-child(even):not(.wms-ag-row--warn):not(.wms-ag-row--critical) td.wms-ag-sticky-name {
+  background-color: color-mix(in oklab, var(--muted) 40%, var(--card));
+}
+.wms-ag-grid tbody tr.wms-ag-row:hover td.wms-ag-sticky-name {
+  background-color: color-mix(in oklab, var(--accent) 35%, var(--card));
+}
+
+.wms-ag-grid.wms-ag-grid--compact thead th,
+.wms-ag-grid.wms-ag-grid--compact tbody td {
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+.wms-ag-grid.wms-ag-grid--fit {
+  min-width: 0;
+}
+}
+
+
+/* APS: список заказов + календарь месяца */
+.aps-split-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 38%) minmax(0, 1fr);
+  gap: 0.75rem;
+  height: 100%;
+}
+
+@media (max-width: 1023px) {
+  .aps-split-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(200px, 38%) minmax(240px, 1fr);
+  }
+}
+
+.aps-split-orders,
+.aps-split-chart {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.production-gantt-board--chart-only [class*="wx-grid"],
+.production-gantt-board--chart-only [class*="wx-table"] {
+  display: none !important;
+  min-width: 0 !important;
+}
+
+/* APS: прокрутка только внутри Gantt, не по всей странице */
+.production-gantt-board {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.production-gantt-toolbar {
+  flex: 0 0 auto;
+}
+
+.production-gantt-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.production-gantt-main > div,
+.production-gantt-main > div > div {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.production-gantt-board > div:not(.production-gantt-toolbar):not(.production-gantt-main) {
+  flex: 0 0 auto;
+}
+
+.production-gantt-board [class*="wx-gantt"] {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  height: 100% !important;
+  overflow: auto !important;
+}
+
+.production-gantt-board [class*="wx-grid"],
+.production-gantt-board [class*="wx-table"] {
+  min-width: 440px;
+}
+
+.production-gantt-board [class*="wx-grid"] [class*="wx-header"],
+.production-gantt-board [class*="wx-table"] [class*="wx-header"] {
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  font-size: 12px !important;
+}
+
+.production-gantt-board [class*="wx-grid"] [class*="wx-cell"],
+.production-gantt-board [class*="wx-table"] [class*="wx-cell"] {
+  align-items: flex-start !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  overflow: visible !important;
+}
+
+.production-gantt-board .aps-gantt-name {
+  box-sizing: border-box;
+  width: 100%;
+  line-height: 1.4;
+  font-size: 12px;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  display: block;
+}
+
+.production-gantt-board .aps-gantt-plan-qty {
+  font-size: 12px;
+  line-height: 1.3;
+  color: rgb(3 105 161);
+}
+
+.dark .production-gantt-board .aps-gantt-plan-qty {
+  color: rgb(125 211 252);
+}
+
+.production-gantt-board .aps-gantt-bar-qty {
+  position: relative;
+  z-index: 3;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
+}
+
+.production-gantt-board [class*="wx-bar"] [class*="wx-progress-wrapper"] {
+  display: none !important;
+}
+
+.production-gantt-board [class*="wx-bar"] [class*="wx-content"] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  position: relative;
+  z-index: 2;
+}
+
+.production-gantt-board [class*="wx-bar"] [class*="wx-progress-marker"] {
+  display: none;
+}
+
+.production-gantt-board [class*="wx-bar"]:hover [class*="wx-link"],
+.production-gantt-board [class*="wx-link"].wx-visible,
+.production-gantt-board [class*="wx-link"].wx-selected {
+  opacity: 1 !important;
+}
+
+.production-gantt-board [class*="wx-link"] {
+  opacity: 0.35;
+  transition: opacity 0.15s ease;
+}
+
+.production-gantt-board [class*="wx-link"] [class*="wx-inner"] {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(15, 23, 42, 0.55);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.production-gantt-board [class*="wx-text"],
+.production-gantt-board [class*="wx-name"] {
+  line-height: 1.4 !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  overflow: visible !important;
+  display: block !important;
+  font-size: 12px !important;
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: unset !important;
+}

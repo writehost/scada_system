@@ -1,0 +1,312 @@
+.panel {
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+  padding: 1rem 1.25rem;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin-top: 0.2rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--muted-foreground);
+}
+
+.code {
+  margin-top: 0.35rem;
+  display: inline-flex;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.68rem;
+  color: var(--foreground);
+  background: color-mix(in oklch, var(--secondary) 90%, var(--background));
+  border: 1px solid color-mix(in oklch, var(--border) 55%, transparent);
+}
+
+.body {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+@media (min-width: 1024px) {
+  .body {
+    grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.65fr);
+    align-items: start;
+  }
+}
+
+.stage {
+  position: relative;
+  min-height: 22rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in oklch, var(--border) 50%, transparent);
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in oklch, var(--primary) 8%, transparent), transparent 55%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 11px,
+      color-mix(in oklch, var(--foreground) 6%, transparent) 11px,
+      color-mix(in oklch, var(--foreground) 6%, transparent) 12px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 11px,
+      color-mix(in oklch, var(--foreground) 6%, transparent) 11px,
+      color-mix(in oklch, var(--foreground) 6%, transparent) 12px
+    ),
+    color-mix(in oklch, var(--foreground) 4%, var(--card));
+}
+
+.canvas {
+  position: relative;
+  margin: 0 auto;
+  height: 100%;
+  min-height: 22rem;
+  max-width: 16rem;
+}
+
+.productImage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  max-height: 88%;
+  max-width: 58%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+
+.imageFallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+
+.imageFallbackIcon {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 1rem;
+  border: 1px dashed color-mix(in oklch, var(--border) 70%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.overlayLine {
+  fill: none;
+  stroke-width: 0.35;
+  stroke-dasharray: 1.2 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.overlayLineOk {
+  stroke: color-mix(in oklch, var(--primary) 75%, white);
+}
+
+.overlayLineLow {
+  stroke: color-mix(in oklch, var(--warning) 80%, white);
+}
+
+.overlayLineMissing {
+  stroke: color-mix(in oklch, var(--destructive) 75%, white);
+}
+
+.anchor {
+  position: absolute;
+  z-index: 3;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin: -0.35rem 0 0 -0.35rem;
+  border-radius: 999px;
+  border: 2px solid var(--card);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground) 25%, transparent);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.anchor:hover,
+.anchorActive {
+  transform: scale(1.2);
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 25%, transparent);
+}
+
+.anchorOk {
+  background: var(--primary);
+}
+
+.anchorLow {
+  background: var(--warning);
+}
+
+.anchorMissing {
+  background: var(--destructive);
+}
+
+.callout {
+  position: absolute;
+  z-index: 4;
+  max-width: 9.5rem;
+  padding: 0.38rem 0.55rem;
+  border-radius: 0.65rem;
+  border: 1px solid color-mix(in oklch, var(--card) 40%, var(--foreground));
+  background: color-mix(in oklch, var(--foreground) 82%, transparent);
+  color: var(--card);
+  font-size: 0.68rem;
+  line-height: 1.3;
+  box-shadow: 0 8px 24px -10px rgb(0 0 0 / 0.45);
+  transform: translate(-50%, -50%);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.calloutRight {
+  transform: translate(0, -50%);
+}
+
+.calloutLeft {
+  transform: translate(-100%, -50%);
+}
+
+.calloutMuted {
+  opacity: 0.72;
+}
+
+.calloutActive {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.03);
+}
+
+.calloutActive.calloutRight {
+  transform: translate(0, -50%) scale(1.03);
+}
+
+.calloutActive.calloutLeft {
+  transform: translate(-100%, -50%) scale(1.03);
+}
+
+.calloutTitle {
+  font-weight: 700;
+}
+
+.calloutQty {
+  margin-top: 0.1rem;
+  opacity: 0.92;
+}
+
+.legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.legendTitle {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.legendList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.45rem 0.55rem;
+  border-radius: 0.7rem;
+  border: 1px solid color-mix(in oklch, var(--border) 55%, transparent);
+  background: color-mix(in oklch, var(--card) 96%, var(--muted));
+  text-align: left;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.legendItem:hover,
+.legendItemActive {
+  border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+  background: color-mix(in oklch, var(--primary) 8%, var(--card));
+}
+
+.legendDot {
+  width: 0.55rem;
+  height: 0.55rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+}
+
+.legendDotOk {
+  background: var(--primary);
+}
+
+.legendDotLow {
+  background: var(--warning);
+}
+
+.legendDotMissing {
+  background: var(--destructive);
+}
+
+.legendText {
+  min-width: 0;
+  flex: 1;
+}
+
+.legendLabel {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.legendMeta {
+  display: block;
+  margin-top: 0.1rem;
+  font-size: 0.68rem;
+  color: var(--muted-foreground);
+}
+
+.hint {
+  margin-top: 0.35rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: var(--muted-foreground);
+}

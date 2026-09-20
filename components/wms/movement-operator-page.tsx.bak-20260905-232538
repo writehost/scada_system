@@ -1,0 +1,567 @@
+"use client"
+
+import { useEffect, useMemo, useState } from "react"
+import { FolderTree } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { OperationDocumentsPage } from "@/components/wms/operation-documents-page"
+import { NomenclatureGroupBrowser } from "@/components/wms/nomenclature-group-browser"
+import { ReceivingNomenclatureGroupDialog } from "@/components/wms/receiving-nomenclature-group-dialog"
+import {
+  getItemStockAvailability,
+  listLocations,
+  loadOperatorPickerGroups,
+  postStockTransfer,
+  type ItemStockAvailability,
+  type WmsItemListRow,
+  type WmsLocationRow,
+} from "@/lib/wms-api"
+import {
+  operatorGroupPickerSectionTitle,
+  type OperatorNomenclatureGroup,
+  type OperatorPickerGroupsSource,
+} from "@/lib/nomenclature-group-catalog"
+import { formatLocationPlacementLabel, compareSequentialCellCodes } from "@/lib/storage-slot-ui"
+import { WmsStickyAlert } from "@/components/wms/wms-sticky-alert"
+import { WmsConfirmDialog, WmsErrorState, WmsLoadingState } from "@/components/wms/wms-shared"
+import { mapWmsError } from "@/lib/wms-error-messages"
+import { cn } from "@/lib/utils"
+
+function fmtQty(n: number | null | undefined): string {
+  const v = Number(n)
+  if (!Number.isFinite(v)) return "0"
+  if (Number.isInteger(v)) return String(v)
+  return v.toFixed(2)
+}
+
+function itemTitle(it: WmsItemListRow): string {
+  const code = (it.itemCode ?? "").trim()
+  const name = (it.name ?? "").trim()
+  if (!name || name === code) return code || "—"
+  return `${name} · ${code}`
+}
+
+/** Код всегда первый — иначе все WAITING выглядят как «Стикеры / Складской материал». */
+function movementLocationLabel(loc: WmsLocationRow): string {
+  const code = (loc.locationCode ?? "").trim()
+  const place = formatLocationPlacementLabel({
+    warehouseCode: loc.warehouseCode,
+    zoneCode: loc.zoneCode,
+    zoneName: loc.zoneName,
+    locationCode: loc.locationCode,
+    displayName: null,
+    slotProfile: loc.slotProfile,
+  })
+  const profileOrName = (loc.displayName || loc.slotTitle || "").trim()
+  const bits = [code]
+  if (place && place !== "—" && place.toUpperCase() !== code.toUpperCase()) bits.push(place)
+  if (
+    profileOrName &&
+    profileOrName.toUpperCase() !== code.toUpperCase() &&
+    !place.toUpperCase().includes(profileOrName.toUpperCase())
+  ) {
+    bits.push(profileOrName)
+  }
+  const onHand = (loc.availableQty ?? 0) + (loc.inProductionQty ?? 0)
+  if (onHand > 0) bits.push(`ост. ${fmtQty(onHand)}`)
+  return bits.filter(Boolean).join(" · ")
+}
+
+function sourceLocationOptionLabel(loc: WmsLocationRow): string {
+  return `${movementLocationLabel(loc)} · доступно ${fmtQty(loc.availableQty)} шт`
+}
+
+function locationMatchesQuery(loc: WmsLocationRow, query: string): boolean {
+  const q = query.trim().toLowerCase()
+  if (!q) return true
+  const hay = [
+    loc.locationCode,
+    loc.displayName,
+    loc.slotTitle,
+    loc.warehouseCode,
+    loc.zoneCode,
+    loc.zoneName,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+  return hay.includes(q)
+}
+
+export function MovementOperatorPage() {
+  const [tab, setTab] = useState("manual")
+  const [locations, setLocations] = useState<WmsLocationRow[]>([])
+  const [sourceLocationCode, setSourceLocationCode] = useState("")
+  const [targetLocationCode, setTargetLocationCode] = useState("")
+  const [sourceQuery, setSourceQuery] = useState("")
+  const [targetQuery, setTargetQuery] = useState("")
+  const [selectedItem, setSelectedItem] = useState<WmsItemListRow | null>(null)
+  const [availability, setAvailability] = useState<ItemStockAvailability | null>(null)
+  const [qty, setQty] = useState("1")
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false)
+  const [nomenclatureGroups, setNomenclatureGroups] = useState<OperatorNomenclatureGroup[]>([])
+  const [groupPickerSource, setGroupPickerSource] = useState<OperatorPickerGroupsSource>("item-groups")
+  const [groupCode, setGroupCode] = useState<string | null>(null)
+
+  const groupLabel = useMemo(() => {
+    if (!groupCode) return "—"
+    return nomenclatureGroups.find((g) => g.code === groupCode)?.name ?? groupCode
+  }, [groupCode, nomenclatureGroups])
+
+  useEffect(() => {
+    void loadOperatorPickerGroups()
+      .then(({ groups: list, source }) => {
+        setGroupPickerSource(source)
+        setNomenclatureGroups(list)
+        if (list.length > 0) {
+          setGroupCode((prev) => (prev && list.some((g) => g.code === prev) ? prev : list[0]!.code))
+        }
+      })
+      .catch(() => setNomenclatureGroups([]))
+  }, [])
+
+  useEffect(() => {
+    void listLocations({ limit: 200 })
+      .then((locRes) => {
+        const locs = [...(locRes.locations ?? [])].sort((a, b) =>
+          compareSequentialCellCodes(a.locationCode, b.locationCode)
+        )
+        setLocations(locs)
+        const withStock = locs.filter((l) => (l.availableQty ?? 0) > 0)
+        const firstSource = withStock[0] ?? locs[0]
+        const firstTarget = locs.find((l) => l.locationCode !== firstSource?.locationCode)
+        if (firstSource) setSourceLocationCode(firstSource.locationCode)
+        if (firstTarget) setTargetLocationCode(firstTarget.locationCode)
+      })
+      .catch((e) => setError(mapWmsError(e)))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const sourceLocations = useMemo(() => {
+    const withStock = locations.filter((l) => (l.availableQty ?? 0) > 0)
+    const base = withStock.length ? withStock : locations
+    return base.filter((l) => locationMatchesQuery(l, sourceQuery))
+  }, [locations, sourceQuery])
+
+  const targetLocations = useMemo(
+    () =>
+      locations
+        .filter((l) => l.locationCode !== sourceLocationCode)
+        .filter((l) => locationMatchesQuery(l, targetQuery)),
+    [locations, sourceLocationCode, targetQuery]
+  )
+
+  useEffect(() => {
+    if (!targetLocations.length) return
+    if (targetLocations.some((l) => l.locationCode === targetLocationCode)) return
+    setTargetLocationCode(targetLocations[0]!.locationCode)
+  }, [targetLocations, targetLocationCode])
+
+  useEffect(() => {
+    if (!sourceLocations.length) return
+    if (sourceLocations.some((l) => l.locationCode === sourceLocationCode)) return
+    setSourceLocationCode(sourceLocations[0]!.locationCode)
+  }, [sourceLocations, sourceLocationCode])
+
+  const sourceLocation = useMemo(
+    () => locations.find((l) => l.locationCode === sourceLocationCode) ?? null,
+    [locations, sourceLocationCode]
+  )
+
+  const sourceCellTotalQty = sourceLocation?.availableQty ?? 0
+  const selectedItemCode = (selectedItem?.itemCode ?? availability?.itemCode ?? "").trim()
+  const selectedItemName = (selectedItem?.name ?? availability?.itemName ?? "").trim()
+  const itemAvailableQty = availability?.totalAvailable ?? null
+  const cellHasOtherSku =
+    itemAvailableQty != null &&
+    sourceCellTotalQty > 0 &&
+    Math.abs(sourceCellTotalQty - itemAvailableQty) > 1e-6
+  const lotsWithQty = useMemo(
+    () => (availability?.lots ?? []).filter((lot) => (lot.availableQty ?? 0) > 0),
+    [availability]
+  )
+
+  async function loadAvailability(it: WmsItemListRow, source = sourceLocationCode) {
+    const loc = source.trim()
+    if (!loc) {
+      setSelectedItem(it)
+      setAvailability(null)
+      return
+    }
+    setSelectedItem(it)
+    setError(null)
+    try {
+      const next = await getItemStockAvailability({
+        itemCode: it.itemCode,
+        locationCode: loc,
+      })
+      setAvailability(next)
+      const max = next.totalAvailable
+      if (max > 0) setQty(String(Math.min(max, Number(qty) || 1)))
+    } catch (e) {
+      setAvailability(null)
+      setError(mapWmsError(e))
+    }
+  }
+
+  function requestTransferConfirm() {
+    if (!selectedItem) {
+      setError("Выберите номенклатуру")
+      return
+    }
+    const from = sourceLocationCode.trim()
+    const to = targetLocationCode.trim()
+    const parsedQty = Number(qty)
+    if (!from || !to) {
+      setError("Выберите ячейки «откуда» и «куда»")
+      return
+    }
+    if (from === to) {
+      setError("Ячейки «откуда» и «куда» должны отличаться")
+      return
+    }
+    if (!Number.isFinite(parsedQty) || parsedQty <= 0) {
+      setError("Укажите количество")
+      return
+    }
+    const max = availability?.totalAvailable ?? selectedItem.availableQty ?? 0
+    if (max > 0 && parsedQty - max > 1e-9) {
+      setError(`Нельзя переместить больше ${fmtQty(max)} шт`)
+      return
+    }
+    setError(null)
+    setConfirmOpen(true)
+  }
+
+  async function submitTransfer() {
+    if (!selectedItem) {
+      setError("Выберите номенклатуру")
+      return
+    }
+    const from = sourceLocationCode.trim()
+    const to = targetLocationCode.trim()
+    const parsedQty = Number(qty)
+    if (!from || !to) {
+      setError("Выберите ячейки «откуда» и «куда»")
+      return
+    }
+    if (from === to) {
+      setError("Ячейки «откуда» и «куда» должны отличаться")
+      return
+    }
+    if (!Number.isFinite(parsedQty) || parsedQty <= 0) {
+      setError("Укажите количество")
+      return
+    }
+    const max = availability?.totalAvailable ?? selectedItem.availableQty ?? 0
+    if (max > 0 && parsedQty - max > 1e-9) {
+      setError(`Нельзя переместить больше ${fmtQty(max)} шт`)
+      return
+    }
+
+    setConfirmOpen(false)
+    setSubmitting(true)
+    setError(null)
+    try {
+      const result = await postStockTransfer({
+        itemCode: selectedItem.itemCode,
+        fromLocationCode: from,
+        toLocationCode: to,
+        qty: parsedQty,
+      })
+      setSuccess(`Перемещено ${fmtQty(parsedQty)} шт · ${from} → ${to}`)
+      await loadAvailability(selectedItem, from)
+      if (result.documentId) setSuccess((prev) => `${prev} · документ ${result.documentId}`)
+    } catch (e) {
+      setError(mapWmsError(e))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Перемещение</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Свободное перемещение остатков между ячейками WMS.</p>
+      </div>
+
+      {error ? <WmsStickyAlert message={error} onDismiss={() => setError(null)} /> : null}
+      {success ? (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-900">
+          {success}
+        </div>
+      ) : null}
+
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="rounded-xl">
+          <TabsTrigger value="manual">Свободное перемещение</TabsTrigger>
+          <TabsTrigger value="documents">Документы WMS</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="documents" className="mt-4">
+          <OperationDocumentsPage kind="movement" />
+        </TabsContent>
+
+        <TabsContent value="manual" className="mt-4 space-y-4">
+          {loading ? <WmsLoadingState label="Загрузка ячеек склада…" /> : null}
+          {!loading && locations.length === 0 && error ? (
+            <WmsErrorState
+              message={error}
+              onRetry={() => {
+                setLoading(true)
+                void listLocations({ limit: 200 })
+                  .then((locRes) => {
+                    const locs = [...(locRes.locations ?? [])].sort((a, b) =>
+                      compareSequentialCellCodes(a.locationCode, b.locationCode)
+                    )
+                    setLocations(locs)
+                  })
+                  .catch((e) => setError(mapWmsError(e)))
+                  .finally(() => setLoading(false))
+              }}
+            />
+          ) : null}
+          <div className="rounded-xl border border-border/60 bg-card px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {operatorGroupPickerSectionTitle(groupPickerSource)}
+                </div>
+                <div className="mt-1 text-base font-semibold text-foreground">{groupLabel}</div>
+                <div className="text-xs text-muted-foreground">
+                  {nomenclatureGroups.find((g) => g.code === groupCode)?.description ||
+                    nomenclatureGroups.find((g) => g.code === groupCode)?.code ||
+                    "Выберите группу для фильтрации номенклатуры"}
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-xl"
+                onClick={() => setGroupDialogOpen(true)}
+                disabled={nomenclatureGroups.length === 0}
+              >
+                <FolderTree className="mr-1.5 h-4 w-4" />
+                Выбрать группу
+              </Button>
+            </div>
+          </div>
+
+          <ReceivingNomenclatureGroupDialog
+            open={groupDialogOpen}
+            onOpenChange={setGroupDialogOpen}
+            groups={nomenclatureGroups}
+            selectedCode={groupCode ?? ""}
+            title={operatorGroupPickerSectionTitle(groupPickerSource)}
+            description="Выберите подгруппу для фильтрации номенклатуры при перемещении."
+            onSelect={(code) => {
+              setGroupCode(code)
+              setSelectedItem(null)
+              setAvailability(null)
+            }}
+          />
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-border/60 bg-card p-4">
+              <NomenclatureGroupBrowser
+                stockOnly
+                hideGroupGrid
+                externalGroupCode={groupCode}
+                selectedItemCode={selectedItem?.itemCode ?? null}
+                onSelectItem={(it) => void loadAvailability(it)}
+                renderItemTitle={itemTitle}
+                searchPlaceholder="Код, GTIN или название"
+              />
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-border/60 bg-card p-4">
+              <div className="text-sm font-semibold">Маршрут и количество</div>
+
+              {selectedItem ? (
+                <div className="rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-xs">
+                  <div className="font-medium text-foreground">Выбрана номенклатура</div>
+                  <div className="mt-0.5 text-muted-foreground">
+                    <span className="font-mono text-foreground">{selectedItemCode || "—"}</span>
+                    {selectedItemName ? ` · ${selectedItemName}` : ""}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Сначала выберите номенклатуру слева.</p>
+              )}
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground" htmlFor="movement-from">
+                  Откуда (ячейка)
+                </label>
+                <Input
+                  value={sourceQuery}
+                  onChange={(e) => setSourceQuery(e.target.value)}
+                  placeholder="Поиск: A-1, цех, зона…"
+                  className="h-9 rounded-lg"
+                />
+                <select
+                  id="movement-from"
+                  value={sourceLocationCode}
+                  onChange={(e) => {
+                    setSourceLocationCode(e.target.value)
+                    if (selectedItem) void loadAvailability(selectedItem, e.target.value)
+                    if (e.target.value === targetLocationCode) {
+                      const next = locations.find((l) => l.locationCode !== e.target.value)
+                      setTargetLocationCode(next?.locationCode ?? "")
+                    }
+                  }}
+                  className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+                >
+                  {sourceLocations.length === 0 ? (
+                    <option value="">Нет ячеек с доступным остатком</option>
+                  ) : (
+                    sourceLocations.map((loc) => (
+                      <option key={loc.locationCode} value={loc.locationCode}>
+                        {sourceLocationOptionLabel(loc)}
+                      </option>
+                    ))
+                  )}
+                </select>
+                <p className="text-[11px] leading-snug text-muted-foreground">
+                  В «Откуда» только ячейки с доступным остатком на складе (не «в цеху»). Введите A-1 в поиске ниже
+                  для поля «Куда».
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground" htmlFor="movement-to">
+                  Куда
+                </label>
+                <Input
+                  value={targetQuery}
+                  onChange={(e) => setTargetQuery(e.target.value)}
+                  placeholder="Поиск ячейки: A-1…"
+                  className="h-9 rounded-lg"
+                />
+                <select
+                  id="movement-to"
+                  value={
+                    targetLocations.some((l) => l.locationCode === targetLocationCode)
+                      ? targetLocationCode
+                      : targetLocations[0]?.locationCode ?? ""
+                  }
+                  onChange={(e) => setTargetLocationCode(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm"
+                >
+                  {targetLocations.length === 0 ? (
+                    <option value="">Ничего не найдено — сбросьте поиск</option>
+                  ) : (
+                    targetLocations.map((loc) => (
+                      <option key={loc.locationCode} value={loc.locationCode}>
+                        {movementLocationLabel(loc)}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground" htmlFor="movement-qty">
+                  Количество
+                </label>
+                <Input
+                  id="movement-qty"
+                  value={qty}
+                  onChange={(e) => setQty(e.target.value)}
+                  inputMode="decimal"
+                  className="rounded-lg"
+                />
+                {availability && selectedItemCode ? (
+                  <div className="space-y-1 rounded-lg border border-border/50 bg-muted/25 px-3 py-2 text-xs">
+                    <p>
+                      <span className="font-medium text-foreground">
+                        Ячейка {availability.locationCode || sourceLocationCode}
+                      </span>
+                      {": по номенклатуре "}
+                      <span className="font-mono">{selectedItemCode}</span>
+                      {" доступно "}
+                      <span className="font-semibold tabular-nums text-foreground">
+                        {fmtQty(availability.totalAvailable)} шт
+                      </span>
+                    </p>
+                    {cellHasOtherSku ? (
+                      <p className="text-muted-foreground">
+                        В этой же ячейке лежат и другие артикулы — всего по ячейке{" "}
+                        <span className="tabular-nums">{fmtQty(sourceCellTotalQty)} шт</span>
+                        {" (это не лимит для выбранной позиции)."}
+                      </p>
+                    ) : null}
+                    {lotsWithQty.length > 1 ? (
+                      <div className="text-muted-foreground">
+                        <div className="font-medium text-foreground/80">Партии по этой номенклатуре:</div>
+                        <ul className="mt-0.5 list-inside list-disc">
+                          {lotsWithQty.map((lot) => (
+                            <li key={lot.lotId}>
+                              {lot.lotCode}:{" "}
+                              <span className="tabular-nums">{fmtQty(lot.availableQty)} шт</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : lotsWithQty.length === 1 ? (
+                      <p className="text-muted-foreground">
+                        Партия {lotsWithQty[0]!.lotCode}: {fmtQty(lotsWithQty[0]!.availableQty)} шт
+                      </p>
+                    ) : null}
+                  </div>
+                ) : selectedItem ? (
+                  <p className="text-xs text-muted-foreground">
+                    Выберите ячейку «откуда», чтобы увидеть доступный остаток именно по этой номенклатуре.
+                  </p>
+                ) : null}
+              </div>
+
+              <Button
+                type="button"
+                disabled={submitting || !selectedItem}
+                onClick={() => requestTransferConfirm()}
+                className="w-full rounded-xl"
+              >
+                {submitting ? "Перемещаем…" : "Переместить"}
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      <WmsConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Подтвердите перемещение"
+        loading={submitting}
+        confirmLabel="Переместить"
+        description={
+          <div className="space-y-1 text-sm">
+            <p>{selectedItem ? itemTitle(selectedItem) : "—"} · {fmtQty(Number(qty) || 0)} шт</p>
+            <p>
+              <strong>{sourceLocationCode}</strong> → <strong>{targetLocationCode}</strong>
+            </p>
+            {availability ? (
+              <p className="text-muted-foreground text-xs">
+                По номенклатуре {availability.itemCode} в ячейке {availability.locationCode || sourceLocationCode}
+                : {fmtQty(availability.totalAvailable)} шт
+                {cellHasOtherSku
+                  ? ` · всего по ячейке ${fmtQty(sourceCellTotalQty)} шт (другие SKU)`
+                  : ""}
+              </p>
+            ) : null}
+          </div>
+        }
+        onConfirm={() => void submitTransfer()}
+      />
+    </div>
+  )
+}

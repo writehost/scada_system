@@ -1,0 +1,8 @@
+template_version,site_code,order_no,supplier_name,order_date,warehouse_code,comment
+1,${siteCode},${orderNo},${supplierName},${orderDate},${warehouseCode},${comment}
+
+line_no,item_code,item_name,qty,uom,barcode,batch,expiry_date,note
+1,${itemCode1},${itemName1},${qty1},шт,${barcode1},${batch1},${expiryDate1},${note1}
+2,${itemCode2},${itemName2},${qty2},шт,${barcode2},${batch2},${expiryDate2},${note2}
+3,${itemCode3},${itemName3},${qty3},шт,${barcode3},${batch3},${expiryDate3},${note3}
+
