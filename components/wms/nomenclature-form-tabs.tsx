@@ -115,12 +115,19 @@ export function NomenclatureFormTabs({
   loading = false,
   lockCode = false,
   defaultTab = "main",
+  scrollMode = "dialog",
 }: {
   form: NomenclatureFormState
   setForm: React.Dispatch<React.SetStateAction<NomenclatureFormState>>
   loading?: boolean
   lockCode?: boolean
   defaultTab?: string
+  /**
+   * "dialog" — форма зажата по высоте и скроллится сама (модалка создания).
+   * "page" — форма встроена в обычную страницу, которая уже скроллится сама;
+   * здесь не добавляем свой overflow, чтобы не было двух полос прокрутки.
+   */
+  scrollMode?: "dialog" | "page"
 }) {
   const [pkgDefs, setPkgDefs] = useState<{ code: string; name: string; isActive: boolean }[]>([])
   const [typeDefs, setTypeDefs] = useState<{ code: string; name: string; isActive: boolean }[]>([])
@@ -230,7 +237,14 @@ export function NomenclatureFormTabs({
         </TabsList>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5 [max-height:calc(95vh-12.5rem)] [min-height:min(480px,45vh)]">
+      <div
+        className={cn(
+          "min-h-0 flex-1 px-4 py-4 sm:px-6 sm:py-5",
+          scrollMode === "dialog"
+            ? "overflow-y-auto overscroll-contain [max-height:calc(95vh-12.5rem)] [min-height:min(480px,45vh)]"
+            : "overflow-visible"
+        )}
+      >
         <TabsContent value="main" className="m-0 mt-0 space-y-4 focus-visible:outline-none">
           <div className="grid gap-3 sm:grid-cols-2">
             <Row label="Профиль упаковки (БД)">

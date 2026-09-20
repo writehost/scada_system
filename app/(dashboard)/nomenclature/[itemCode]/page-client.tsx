@@ -124,6 +124,9 @@ function fmtDateTimeRu(value: unknown): string {
 const linkClass =
   "font-medium text-emerald-800 underline-offset-2 hover:underline dark:text-emerald-400"
 
+/** Партии уже загружены целиком с сервера, но рендерим окном, чтобы не класть в DOM сотни строк разом. */
+const LOTS_PAGE = 50
+
 function otherLotQty(l: Record<string, unknown>): { total: number; parts: string[] } {
   const reserved = Number(l.reservedQty ?? 0)
   const inTransit = Number(l.inTransitQty ?? 0)
@@ -294,6 +297,7 @@ function NomenclatureItemPageInner() {
   const [lotMoveQty, setLotMoveQty] = useState("")
   const [mainTab, setMainTab] = useState("catalog")
   const [itemAliases, setItemAliases] = useState<ItemAliasRow[]>([])
+  const [lotsVisibleCount, setLotsVisibleCount] = useState(LOTS_PAGE)
 
   const receivingReceipts = useMemo(() => data?.receivingReceipts ?? [], [data])
 
@@ -336,6 +340,20 @@ function NomenclatureItemPageInner() {
     }
     // Default: где лежит. Не уводим на партии/приёмки автоматически.
   }, [highlightLotCode, highlightLocationCode])
+
+  useEffect(() => {
+    setLotsVisibleCount(LOTS_PAGE)
+  }, [itemCode])
+
+  useEffect(() => {
+    if (!highlightLotCode) return
+    const idx = lots.findIndex(
+      (l) => String(l.lotCode ?? "").toLowerCase() === highlightLotCode.toLowerCase()
+    )
+    if (idx >= 0 && idx + 1 > lotsVisibleCount) {
+      setLotsVisibleCount(idx + 1)
+    }
+  }, [highlightLotCode, lots, lotsVisibleCount])
 
   useEffect(() => {
     if (!highlightLotCode && !highlightLocationCode) return
@@ -787,7 +805,7 @@ function NomenclatureItemPageInner() {
                       </tr>
                     </thead>
                     <tbody>
-                      {lots.map((l, idx) => {
+                      {lots.slice(0, lotsVisibleCount).map((l, idx) => {
                         const lotCode = String(l.lotCode ?? "")
                         const emission = lotEmissionInfo(l)
                         const isFefoFirst = itemPerishable && idx === 0 && Number(l.availableQty ?? 0) > 0
@@ -861,6 +879,23 @@ function NomenclatureItemPageInner() {
                       })}
                     </tbody>
                   </table>
+                  {lots.length > lotsVisibleCount ? (
+                    <div className="border-t border-border/60 p-3 text-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg"
+                        onClick={() => setLotsVisibleCount((n) => n + LOTS_PAGE)}
+                      >
+                        Ещё {Math.min(LOTS_PAGE, lots.length - lotsVisibleCount)}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="border-t border-border/40 px-4 py-2 text-center text-[11px] text-muted-foreground">
+                      Показано {lots.length}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -974,6 +1009,7 @@ function NomenclatureItemPageInner() {
                     loading={nomSaving}
                     lockCode
                     defaultTab="main"
+                    scrollMode="page"
                   />
                 </div>
               ) : (
