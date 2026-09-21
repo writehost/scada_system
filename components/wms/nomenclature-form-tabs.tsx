@@ -395,12 +395,13 @@ export function NomenclatureFormTabs({
         </div>
 
         <div className="grid min-h-0 flex-1 items-start sm:grid-cols-[196px_1fr]">
-          {/* Липкий рейл разделов */}
+          {/* Липкий рейл разделов. Без собственного overflow/scroll — иначе колесо мыши
+              над узкой колонкой крутит список разделов отдельно от контента справа
+              и рейл с видимыми полями расходятся. */}
           <nav
             className={cn(
-              "sticky z-10 hidden self-start overflow-auto border-b border-border bg-muted/10 p-2 sm:block sm:border-b-0 sm:border-r",
-              railTop,
-              "sm:[max-height:calc(100vh-6rem)]"
+              "sticky z-10 hidden self-start border-b border-border bg-muted/10 p-2 sm:block sm:border-b-0 sm:border-r",
+              railTop
             )}
             aria-label="Разделы формы номенклатуры"
           >
