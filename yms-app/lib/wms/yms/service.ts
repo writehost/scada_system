@@ -1,5 +1,13 @@
 import type { PoolClient } from "pg"
-import { canFinishOperation } from "@/lib/wms/yms/loading-gate"
+import {
+  hashDriverToken,
+  linkVisitDriver,
+  loadingCard,
+  newDriverToken,
+  readinessForFinish,
+  recordDriverCall,
+  upsertDriver,
+} from "@/lib/wms/yms/ops"
 import {
   ACTION_LABEL,
   allowedActions,
@@ -331,10 +339,27 @@ export async function createVisit(ctx: YmsCtx) {
     ]
   )
   const visitId = ins.rows[0].visitId
+  const driverName = str(ctx.body.driverName)
+  if (driverName) {
+    const driverId = await upsertDriver(ctx.client, ctx.siteId, {
+      fullName: driverName,
+      carrierName: str(ctx.body.carrierName) || null,
+      phone: str(ctx.body.driverPhone) || null,
+    })
+    await ctx.client.query(
+      `UPDATE yms_visits SET driver_id = $3::bigint WHERE site_id = $1 AND visit_id = $2::bigint`,
+      [ctx.siteId, visitId, driverId]
+    )
+  }
+  const driverToken = newDriverToken()
+  await ctx.client.query(
+    `UPDATE yms_visits SET driver_token_hash = $3 WHERE site_id = $1 AND visit_id = $2::bigint`,
+    [ctx.siteId, visitId, hashDriverToken(driverToken)]
+  )
   await writeEvent(ctx, visitId, null, status, walkIn ? "arrive" : "create", str(ctx.body.reason) || null, null)
   if (walkIn) await notify(ctx, visitId, "gate", "arrived", `Внеплановый ${plate} на КПП`)
   const visit = await fetchVisit(ctx.client, ctx.siteId, visitId, true)
-  return { visit }
+  return { visit, driverToken, driverPath: `/d/${driverToken}` }
 }
 
 async function writeEvent(
@@ -423,7 +448,11 @@ export async function transitionVisit(ctx: YmsCtx, visitId: string) {
 
 async function notifyFor(ctx: YmsCtx, visit: { visitId: string; plate: string }, to: YmsStatus, action: YmsAction) {
   if (action === "arrive") await notify(ctx, visit.visitId, "dispatcher", "arrived", `${visit.plate} на КПП`)
-  if (action === "assign_dock") await notify(ctx, visit.visitId, "driver", "called", `${visit.plate}: вызов к доку`)
+  if (action === "assign_dock") {
+    const message = `${visit.plate}: вызов к доку`
+    await notify(ctx, visit.visitId, "driver", "called", message)
+    await recordDriverCall(ctx, visit.visitId, message)
+  }
   if (action === "complete_operation") {
     await notify(ctx, visit.visitId, "dispatcher", "loaded", `${visit.plate}: операция завершена`)
   }
@@ -541,8 +570,8 @@ function assertActionPermission(roleCodes: string[], action: YmsAction) {
       ? "yms.assign"
       : "yms.visit.write"
   if (warehouse.has(action)) {
-    if (!grantsAllow(roleCodes, "yms.warehouse.confirm") && !grantsAllow(roleCodes, "yms.assign")) {
-      bad("недостаточно прав: yms.warehouse.confirm", "permission_denied", 403)
+    if (!grantsAllow(roleCodes, "yms.warehouse.confirm")) {
+      bad("завершение погрузки подтверждает склад, не диспетчер", "permission_denied", 403)
     }
     return
   }
@@ -592,29 +621,11 @@ async function assertWarehouseReady(
   ctx: YmsCtx,
   visit: { visitId: string; operation: YmsOperation; wmsDocumentId: string | null }
 ) {
-  const disc = await ctx.client.query(
-    `SELECT 1 FROM yms_visit_discrepancies
-     WHERE site_id = $1 AND visit_id = $2::bigint AND acknowledged
-     LIMIT 1`,
-    [ctx.siteId, visit.visitId]
-  )
-  let plannedQty = 0
-  let confirmedQty = 0
-  const hasDocument = Boolean(visit.wmsDocumentId)
   if (visit.wmsDocumentId) {
     const order = await getWmsOrder(ctx.client, ctx.siteId, visit.wmsDocumentId)
     if (!order) bad("связанный заказ WMS не найден", "wms_order_not_found", 404)
-    plannedQty = order.plannedQty
-    confirmedQty = order.confirmedQty
   }
-  const gate = canFinishOperation(visit.operation, {
-    hasDocument,
-    plannedQty,
-    confirmedQty,
-    palletCount: 0,
-    openTaskCount: 0,
-    acknowledgedDiscrepancy: Boolean(disc.rowCount),
-  })
+  const gate = await readinessForFinish(ctx.client, ctx.siteId, visit)
   if (gate.ok === false) bad(gate.message, gate.code, 409)
 }
 
@@ -655,8 +666,20 @@ export async function getVisitDetail(ctx: YmsCtx, visitId: string) {
   )
   let order: WmsOrderCard | null = null
   if (visit.wmsDocumentId) order = await getWmsOrder(ctx.client, ctx.siteId, visit.wmsDocumentId)
-  return { visit, events: events.rows, discrepancies: discrepancies.rows, order }
+  const loading = await loadingCard(ctx, visitId)
+  const calls = await ctx.client.query(
+    `SELECT call_id::text AS "callId", channel, message, sent_at AS "sentAt",
+            delivered_at AS "deliveredAt", acknowledged_at AS "acknowledgedAt"
+     FROM yms_driver_calls
+     WHERE site_id = $1 AND visit_id = $2::bigint
+     ORDER BY call_id DESC
+     LIMIT 5`,
+    [ctx.siteId, visitId]
+  )
+  return { visit, events: events.rows, discrepancies: discrepancies.rows, order, loading, calls: calls.rows }
 }
+
+export { linkVisitDriver }
 
 export async function loadBoard(ctx: YmsCtx) {
   const url = ctx.url
@@ -737,12 +760,23 @@ export async function loadBoard(ctx: YmsCtx) {
     [ctx.siteId]
   )
   const yard = await listYard(ctx)
+  const jobs = await ctx.client.query(
+    `SELECT job_id::text AS "jobId", visit_id::text AS "visitId",
+            dock_object_id::text AS "dockObjectId", fleet_unit_id AS "fleetUnitId",
+            status, carrying_code AS "carryingCode"
+     FROM yms_dock_jobs
+     WHERE site_id = $1 AND status NOT IN ('done', 'cancelled')
+     ORDER BY job_id DESC
+     LIMIT 80`,
+    [ctx.siteId]
+  )
   return {
     kpis: kpi.rows[0],
     visits: rows.rows.map((row) => presentVisit(row, reveal)),
     events: events.rows,
     notifications: notices.rows,
     objects: yard.objects,
+    jobs: jobs.rows,
     limit,
     offset,
   }

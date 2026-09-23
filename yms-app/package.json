@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "next dev --webpack -H 0.0.0.0 -p 3014",
     "build": "next build --webpack",
-    "start": "next start -H 127.0.0.1 -p 3014"
+    "start": "next start -H 127.0.0.1 -p 3014",
+    "test": "node --experimental-strip-types --test scripts/test-ops.mjs"
   },
   "dependencies": {
     "next": "16.2.4",

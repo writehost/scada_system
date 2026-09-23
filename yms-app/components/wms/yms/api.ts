@@ -80,6 +80,14 @@ export type BoardPayload = {
     createdAt: string
   }>
   objects: YardObject[]
+  jobs?: Array<{
+    jobId: string
+    visitId: string
+    dockObjectId: string | null
+    fleetUnitId: string
+    status: string
+    carryingCode: string | null
+  }>
 }
 
 async function parse<T>(res: Response): Promise<T> {
@@ -126,6 +134,28 @@ export async function fetchVisit(visitId: string) {
       ready: boolean
       documentStatus: string
     } | null
+    loading?: {
+      phase: { code: string; label: string }
+      documentNo: string | null
+      plannedQty: number
+      confirmedQty: number
+      plannedPallets: number
+      loadedPallets: number
+      gap: string | null
+      startedAt: string | null
+      idleMinutes: number | null
+      canFinish: boolean
+      blockReason: string | null
+      wmsScanCodes: string[]
+    }
+    calls?: Array<{
+      callId: string
+      channel: string
+      message: string
+      sentAt: string
+      deliveredAt: string | null
+      acknowledgedAt: string | null
+    }>
   }>(res)
 }
 
@@ -176,6 +206,54 @@ export async function searchOrders(q: string) {
       ready: boolean
     }>
   }>(res)
+}
+
+export async function postScan(visitId: string, code: string, mark?: string) {
+  const res = await fetch(`/api/yms/visits/${visitId}/scan?${siteQuery()}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ siteCode: siteCode(), code, mark, requestId: crypto.randomUUID() }),
+  })
+  return parse<{ result: string }>(res)
+}
+
+export async function postDriver(visitId: string, body: Record<string, unknown>) {
+  const res = await fetch(`/api/yms/visits/${visitId}/driver?${siteQuery()}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, siteCode: siteCode() }),
+  })
+  return parse<{ driverId: string }>(res)
+}
+
+export async function postEquipment(visitId: string, body: Record<string, unknown>) {
+  const res = await fetch(`/api/yms/visits/${visitId}/equipment?${siteQuery()}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...body, siteCode: siteCode() }),
+  })
+  return parse<{ vehicleId?: string; trailerVehicleId?: string | null }>(res)
+}
+
+export async function fetchFleet() {
+  const res = await fetch(`/api/yms/fleet?${siteQuery()}`, { cache: "no-store", credentials: "include" })
+  return parse<{
+    fleet: { available: boolean; reason?: string; units?: Array<{ id: string; name: string; enabled: boolean; driverName: string | null; shiftCode: string | null; missionStatus: string | null; hasPosition: false }> }
+    jobs: Array<{ jobId: string; visitId: string; fleetUnitId: string; status: string; carryingCode: string | null }>
+  }>(res)
+}
+
+export async function postJob(visitId: string, fleetUnitId: string) {
+  const res = await fetch(`/api/yms/visits/${visitId}/job?${siteQuery()}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ siteCode: siteCode(), fleetUnitId }),
+  })
+  return parse<{ jobId: string }>(res)
 }
 
 export async function saveYard(body: Record<string, unknown>) {

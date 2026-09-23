@@ -119,6 +119,76 @@ CREATE TABLE IF NOT EXISTS yms_notifications (
 
 CREATE INDEX IF NOT EXISTS yms_notifications_site_idx
   ON yms_notifications (site_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS yms_drivers (
+  driver_id BIGSERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES wms_sites(site_id) ON DELETE CASCADE,
+  full_name TEXT NOT NULL,
+  carrier_name TEXT,
+  phone TEXT,
+  restrictions TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS yms_drivers_identity_uidx
+  ON yms_drivers (site_id, lower(full_name), lower(COALESCE(carrier_name, '')));
+
+ALTER TABLE yms_visits ADD COLUMN IF NOT EXISTS driver_id BIGINT REFERENCES yms_drivers(driver_id);
+ALTER TABLE yms_visits ADD COLUMN IF NOT EXISTS trailer_vehicle_id BIGINT REFERENCES yms_vehicles(vehicle_id);
+ALTER TABLE yms_visits ADD COLUMN IF NOT EXISTS driver_token_hash TEXT;
+ALTER TABLE yms_vehicles ADD COLUMN IF NOT EXISTS unit_role TEXT NOT NULL DEFAULT 'tractor';
+
+CREATE TABLE IF NOT EXISTS yms_pallet_scans (
+  scan_id BIGSERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES wms_sites(site_id) ON DELETE CASCADE,
+  visit_id BIGINT NOT NULL REFERENCES yms_visits(visit_id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  load_unit_id BIGINT,
+  qty NUMERIC(14,3) NOT NULL DEFAULT 1,
+  result TEXT NOT NULL,
+  reject_code TEXT,
+  actor_login TEXT,
+  client_request_id TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS yms_pallet_scans_accept_uidx
+  ON yms_pallet_scans (site_id, visit_id, code)
+  WHERE result = 'accepted';
+
+CREATE UNIQUE INDEX IF NOT EXISTS yms_pallet_scans_request_uidx
+  ON yms_pallet_scans (site_id, client_request_id)
+  WHERE client_request_id IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS yms_driver_calls (
+  call_id BIGSERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES wms_sites(site_id) ON DELETE CASCADE,
+  visit_id BIGINT NOT NULL REFERENCES yms_visits(visit_id) ON DELETE CASCADE,
+  channel TEXT NOT NULL DEFAULT 'board',
+  message TEXT NOT NULL,
+  sent_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  delivered_at TIMESTAMPTZ,
+  acknowledged_at TIMESTAMPTZ,
+  actor_login TEXT
+);
+
+CREATE TABLE IF NOT EXISTS yms_dock_jobs (
+  job_id BIGSERIAL PRIMARY KEY,
+  site_id INT NOT NULL REFERENCES wms_sites(site_id) ON DELETE CASCADE,
+  visit_id BIGINT NOT NULL REFERENCES yms_visits(visit_id) ON DELETE CASCADE,
+  dock_object_id BIGINT REFERENCES yms_yard_objects(object_id),
+  fleet_unit_id TEXT NOT NULL,
+  fleet_driver_id TEXT,
+  status TEXT NOT NULL,
+  carrying_code TEXT,
+  note TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS yms_dock_jobs_visit_idx
+  ON yms_dock_jobs (site_id, visit_id, status);
 `
 
 const STARTER: Array<{

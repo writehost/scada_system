@@ -20,8 +20,11 @@ import { ACTION_LABEL, OPERATION_LABEL, STATUS_LABEL } from "@/lib/wms/yms/state
 import type { YmsAction, YmsStatus } from "@/lib/wms/yms/state-machine"
 import {
   fetchBoard,
+  fetchFleet,
   fetchVisit,
   postDiscrepancy,
+  postJob,
+  postScan,
   postTransition,
   postVisit,
   saveYard,
@@ -71,6 +74,7 @@ export function YmsDispatcher() {
   const [operation, setOperation] = useState("")
   const [lateOnly, setLateOnly] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedDockId, setSelectedDockId] = useState<string | null>(null)
   const [detail, setDetail] = useState<Awaited<ReturnType<typeof fetchVisit>> | null>(null)
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -282,9 +286,12 @@ export function YmsDispatcher() {
           <YardMap
             objects={objects}
             visits={visits}
+            jobs={board?.jobs ?? []}
             selectedId={selectedId}
+            selectedObjectId={selectedDockId}
             editing={editing}
             onSelectVisit={setSelectedId}
+            onSelectObject={setSelectedDockId}
             onMove={(objectId, x, y) => {
               setDraftObjects((prev) => {
                 const base = prev ?? board?.objects ?? []
@@ -311,6 +318,9 @@ export function YmsDispatcher() {
         </section>
 
         <aside className="min-h-0 overflow-y-auto border-t border-border p-3 lg:border-l lg:border-t-0">
+          {selectedDockId && (
+            <DockNote objects={objects} visits={board?.visits ?? []} dockId={selectedDockId} />
+          )}
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Доки</h2>
           <ul className="mt-2 space-y-1">
             {objects
@@ -416,20 +426,24 @@ function VisitBody({
         {visit.driverPhone ? ` · ${visit.driverPhone}` : ""}
       </p>
       {visit.counterparty && <p>Контрагент: {visit.counterparty}</p>}
-      {detail.order && (
-        <div className="rounded-md border border-border p-2 text-xs">
-          <div className="font-medium">
-            Заказ WMS {detail.order.documentNo || detail.order.documentId}
-          </div>
-          <div>
-            План {detail.order.plannedQty}, подтверждено {detail.order.confirmedQty}, осталось {detail.order.remainingQty}. Палет {detail.order.palletCount}.
-          </div>
-          {detail.order.locations && <div>Где лежит: {detail.order.locations}</div>}
-          <a href={`https://wms.scada25.ru/documents/${detail.order.documentId}`} className="underline">
-            Открыть в WMS
-          </a>
-        </div>
+      {detail.loading && (
+        <LoadingCard
+          visitId={visit.visitId}
+          status={visit.status}
+          loading={detail.loading}
+          calls={detail.calls ?? []}
+          disabled={busy}
+          onScan={async (code, mark) => {
+            await postScan(visit.visitId, code, mark)
+          }}
+        />
       )}
+      {detail.order && (
+        <a href={`https://wms.scada25.ru/documents/${detail.order.documentId}`} className="text-xs underline">
+          Заказ WMS {detail.order.documentNo || detail.order.documentId}
+        </a>
+      )}
+      <FleetAssign visitId={visit.visitId} dockCode={visit.dockCode} disabled={busy} />
       {visit.actions.includes("park") && (
         <select value={parkingObjectId} onChange={(e) => setParking(e.target.value)} className="h-8 w-full rounded-md border border-border bg-card px-2 text-xs" aria-label="Стоянка">
           <option value="">Стоянка</option>
@@ -486,6 +500,153 @@ function VisitBody({
           </li>
         ))}
       </ul>
+    </div>
+  )
+}
+
+function DockNote({
+  objects,
+  visits,
+  dockId,
+}: {
+  objects: YardObject[]
+  visits: YmsVisit[]
+  dockId: string
+}) {
+  const dock = objects.find((object) => object.objectId === dockId)
+  if (!dock) return null
+  const visit = visits.find((row) => row.visitId === dock.currentVisitId)
+  return (
+    <div className="mb-3 rounded-md border border-border p-2 text-xs">
+      <div className="font-medium">{dock.code}</div>
+      <div>{DOCK_STATUS[dock.status] || dock.status}</div>
+      <div>{visit ? visit.plate : "машина не назначена"}</div>
+    </div>
+  )
+}
+
+function LoadingCard({
+  visitId,
+  status,
+  loading,
+  calls,
+  disabled,
+  onScan,
+}: {
+  visitId: string
+  status: string
+  loading: NonNullable<Awaited<ReturnType<typeof fetchVisit>>["loading"]>
+  calls: NonNullable<Awaited<ReturnType<typeof fetchVisit>>["calls"]>
+  disabled: boolean
+  onScan: (code: string, mark?: string) => Promise<void>
+}) {
+  const [code, setCode] = useState("")
+  const [note, setNote] = useState<string | null>(null)
+  const call = calls[0]
+  return (
+    <div className="rounded-md border border-border p-2 text-xs">
+      <div className="font-medium">{loading.phase.label}</div>
+      <div>
+        Палеты {loading.loadedPallets} из {loading.plannedPallets || "—"}
+        {loading.documentNo ? ` · ${loading.documentNo}` : ""}
+      </div>
+      <div>
+        WMS {loading.confirmedQty} из {loading.plannedQty}
+        {loading.idleMinutes != null ? ` · простой ${loading.idleMinutes} мин` : ""}
+      </div>
+      {loading.gap === "wms_pallets_missing" && <div>В заказе WMS нет кодов палет. Скан их не создаёт.</div>}
+      {loading.blockReason && <div>{loading.blockReason}</div>}
+      {call && (
+        <div>
+          Вызов {new Date(call.sentAt).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+          {call.deliveredAt ? " · доставлено" : " · доставка не подтверждена"}
+          {call.acknowledgedAt ? " · водитель подтвердил" : ""}
+        </div>
+      )}
+      {(status === "loading" || status === "unloading") && (
+      <>
+      <form
+        className="mt-2 flex gap-1"
+        onSubmit={(event) => {
+          event.preventDefault()
+          setNote(null)
+          void onScan(code)
+            .then(() => {
+              setCode("")
+              setNote("скан принят")
+            })
+            .catch((error: Error) => setNote(error.message))
+        }}
+      >
+        <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="Код палеты" aria-label={`Скан ${visitId}`} className="h-8" />
+        <Button type="submit" size="sm" disabled={disabled || !code.trim()}>
+          Скан
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={disabled || !code.trim()}
+          onClick={() => {
+            void onScan(code, "damage").catch((error: Error) => setNote(error.message))
+          }}
+        >
+          Повреждение
+        </Button>
+      </form>
+      {note && <div>{note}</div>}
+      </>
+      )}
+    </div>
+  )
+}
+
+function FleetAssign({ visitId, dockCode, disabled }: { visitId: string; dockCode: string | null; disabled: boolean }) {
+  const [units, setUnits] = useState<Array<{ id: string; name: string; enabled: boolean; driverName: string | null; shiftCode: string | null }>>([])
+  const [reason, setReason] = useState<string | null>(null)
+  const [picked, setPicked] = useState("")
+  useEffect(() => {
+    void fetchFleet()
+      .then((data) => {
+        if (!data.fleet.available) {
+          setReason(data.fleet.reason || "флот WMS недоступен")
+          setUnits([])
+          return
+        }
+        setUnits(data.fleet.units ?? [])
+        setReason(null)
+      })
+      .catch((error: Error) => setReason(error.message))
+  }, [visitId])
+  if (!dockCode) return null
+  return (
+    <div className="rounded-md border border-border p-2 text-xs">
+      <div className="font-medium">Погрузчики WMS · {dockCode}</div>
+      {reason && <div>{reason}</div>}
+      {units.length > 0 && (
+        <div className="mt-1 flex gap-1">
+          <select value={picked} onChange={(e) => setPicked(e.target.value)} className="h-8 flex-1 rounded-md border border-border bg-card px-2" aria-label="Погрузчик">
+            <option value="">Свободные из флота</option>
+            {units.filter((unit) => unit.enabled).map((unit) => (
+              <option key={unit.id} value={unit.id}>
+                {unit.name}
+                {unit.driverName ? ` · ${unit.driverName}` : ""}
+                {unit.shiftCode ? ` · смена ${unit.shiftCode}` : ""}
+              </option>
+            ))}
+          </select>
+          <Button
+            type="button"
+            size="sm"
+            disabled={disabled || !picked}
+            onClick={() => {
+              void postJob(visitId, picked).catch((error: Error) => setReason(error.message))
+            }}
+          >
+            Назначить
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
