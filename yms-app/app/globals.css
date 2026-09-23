@@ -1,0 +1,94 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #f4f1ea;
+  --color-foreground: #1f2a24;
+  --color-card: #fffcf7;
+  --color-muted: #efeae1;
+  --color-muted-foreground: #5d675f;
+  --color-border: #e4ddd0;
+  --color-primary: #c6e34a;
+  --color-primary-foreground: #24300a;
+  --color-destructive: #9f2d2d;
+  --color-ring: #8ea832;
+  --font-sans: "Segoe UI", "Helvetica Neue", sans-serif;
+}
+
+:root {
+  --foreground: #1f2a24;
+  --border: #e4ddd0;
+  --card: #fffcf7;
+  --primary: #c6e34a;
+  --primary-foreground: #24300a;
+  --muted: #efeae1;
+  --destructive: #9f2d2d;
+  --chart-2: #3d6b8a;
+  --chart-3: #c4a15a;
+  --background: #f4f1ea;
+}
+
+html, body { height: 100%; }
+body { font-family: var(--font-sans); background: var(--background); color: var(--foreground); }
+
+.yms-shell { height: 100%; min-height: 0; }
+.yms-btn {
+  border: 0;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 36px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.yms-btn.sm { height: 32px; font-size: 12px; }
+.yms-btn.outline { background: transparent; border: 1px solid var(--border); color: var(--foreground); }
+.yms-btn:disabled { opacity: 0.5; cursor: default; }
+.yms-input {
+  height: 36px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  padding: 0 10px;
+  color: var(--foreground);
+}
+.yms-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 24, 18, 0.35);
+  z-index: 40;
+  display: flex;
+  justify-content: flex-end;
+}
+.yms-modal {
+  margin: auto;
+  width: min(440px, calc(100% - 24px));
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+.yms-sheet {
+  width: min(420px, 100%);
+  height: 100%;
+  overflow: auto;
+  background: var(--card);
+  border-left: 1px solid var(--border);
+  padding: 16px;
+}
+.yms-sheet-close { border: 0; background: transparent; color: #5d675f; cursor: pointer; margin-bottom: 8px; }
+.yms-modal-title { margin: 0 0 8px; font-size: 18px; font-weight: 650; }
+.yms-login { min-height: 100%; display: grid; place-items: center; padding: 24px; }
+.yms-card {
+  width: min(400px, 100%);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+}
+.yms-kicker { letter-spacing: 0.14em; font-size: 11px; color: #5d675f; margin: 0 0 8px; }
+.yms-card h1 { margin: 0 0 8px; font-size: 28px; }
+.yms-card p { color: #5d675f; margin: 0 0 16px; }
+.yms-card form { display: grid; gap: 10px; }
+.yms-error { color: var(--destructive); font-size: 13px; margin: 0; }
