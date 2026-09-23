@@ -17,7 +17,9 @@ export default function DashboardLayout({
   const lockPane =
     pathname === "/settings" ||
     pathname.startsWith("/settings/") ||
-    pathname === "/warehouse-stock/finished-goods"
+    pathname === "/warehouse-stock/finished-goods" ||
+    pathname === "/yms" ||
+    pathname.startsWith("/yms/")
 
   return (
     <Suspense fallback={null}>

@@ -31,6 +31,8 @@ import {
   HeartPulse,
   Bell,
   Route,
+  MapPin,
+  Shield,
 } from "lucide-react"
 
 const BADGE_CACHE_KEY = "wms_nav_counters"
@@ -60,6 +62,8 @@ const navigation: NavGroup[] = [
     title: "Операции",
     items: [
       { title: "Приёмка", href: "/receiving", icon: Truck },
+      { title: "Территория", href: "/yms", icon: MapPin },
+      { title: "КПП", href: "/yms/gate", icon: Shield },
       { title: "Перемещение", href: "/movement", icon: ArrowRightLeft },
       { title: "Возврат", href: "/return", icon: RotateCcw },
       { title: "Ревизия", href: "/revision", icon: ClipboardCheck },

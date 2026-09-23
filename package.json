@@ -11,6 +11,7 @@
         "start": "next start",
         "lint": "eslint .",
         "test:aps": "node --experimental-strip-types --test scripts/test-aps-gantt.mjs",
+        "test:yms": "node --experimental-strip-types --test scripts/test-yms-state.mjs",
         "test:crpt": "node --experimental-strip-types --test scripts/test-crpt-codes.mjs",
         "test:issue": "node --test scripts/test-issue-api.mjs",
         "smoke:e2e": "node scripts/e2e-wms-pages.mjs",
