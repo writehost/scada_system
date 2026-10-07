@@ -33,6 +33,7 @@ import {
   Route,
   MapPin,
   Shield,
+  FileType2,
 } from "lucide-react"
 
 const BADGE_CACHE_KEY = "wms_nav_counters"
@@ -86,6 +87,7 @@ const navigation: NavGroup[] = [
       { title: "Очередь заданий", href: "/tasks", icon: ClipboardList },
       { title: "AprilTag", href: "/warehouse-stock/finished-goods/apriltags", icon: ScanLine },
       { title: "Документы", href: "/documents", icon: FileText },
+      { title: "Шаблоны документов", href: "/doc-templates", icon: FileType2 },
       { title: "Терминалы", href: "/terminals", icon: Terminal },
       { title: "Уведомления", href: "/admin/notifications", icon: Bell },
       { title: "Здоровье БД", href: "/db-health", icon: HeartPulse },
