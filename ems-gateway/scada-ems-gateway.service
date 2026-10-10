@@ -1,0 +1,21 @@
+[Unit]
+Description=SCADA EMS Gateway (опрос приборов учёта, исходящая связь с облаком)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=EMS_GATEWAY_CONFIG=/etc/scada-ems-gateway/config.json
+ExecStart=/usr/bin/env node /opt/scada-ems-gateway/src/cli.mjs run
+Restart=always
+RestartSec=5
+User=scada-ems
+Group=scada-ems
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/scada-ems-gateway
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,170 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Токены SCADA System: те же значения, что в WMS (app/globals.css корня репозитория). */
+:root {
+  --background: oklch(0.96 0.01 90);
+  --foreground: oklch(0.25 0.04 145);
+  --card: oklch(0.995 0 0);
+  --card-foreground: oklch(0.25 0.04 145);
+  --popover: oklch(0.995 0 0);
+  --primary: oklch(0.83 0.18 115);
+  --primary-foreground: oklch(0.25 0.04 145);
+  --secondary: oklch(0.92 0.02 90);
+  --secondary-foreground: oklch(0.35 0.04 145);
+  --muted: oklch(0.92 0.02 90);
+  --muted-foreground: oklch(0.45 0.02 145);
+  --accent: oklch(0.83 0.18 115);
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.88 0.02 90);
+  --input: oklch(0.92 0.02 90);
+  --ring: oklch(0.83 0.18 115);
+  --chart-1: oklch(0.72 0.17 115);
+  --chart-2: oklch(0.55 0.12 250);
+  --chart-3: oklch(0.7 0.15 55);
+  --chart-4: oklch(0.55 0.2 25);
+  --chart-5: oklch(0.6 0.15 320);
+  --radius: 1rem;
+  --sidebar: oklch(0.995 0 0);
+  --sidebar-foreground: oklch(0.25 0.04 145);
+  --sidebar-accent: oklch(0.94 0.02 90);
+  --sidebar-border: oklch(0.9 0.02 90);
+  --warning: oklch(0.7 0.15 55);
+  --warning-foreground: oklch(0.3 0.05 55);
+  --success: oklch(0.6 0.15 145);
+}
+
+.dark {
+  --background: oklch(0.18 0.02 145);
+  --foreground: oklch(0.95 0.01 90);
+  --card: oklch(0.22 0.02 145);
+  --card-foreground: oklch(0.95 0.01 90);
+  --popover: oklch(0.22 0.02 145);
+  --primary: oklch(0.83 0.18 115);
+  --primary-foreground: oklch(0.2 0.04 145);
+  --secondary: oklch(0.26 0.02 145);
+  --secondary-foreground: oklch(0.9 0.01 90);
+  --muted: oklch(0.26 0.02 145);
+  --muted-foreground: oklch(0.6 0.02 90);
+  --accent: oklch(0.83 0.18 115);
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.3 0.02 145);
+  --input: oklch(0.26 0.02 145);
+  --ring: oklch(0.83 0.18 115);
+  --chart-1: oklch(0.83 0.18 115);
+  --chart-2: oklch(0.6 0.12 250);
+  --chart-3: oklch(0.75 0.15 55);
+  --chart-4: oklch(0.6 0.2 25);
+  --chart-5: oklch(0.65 0.15 320);
+  --sidebar: oklch(0.15 0.02 145);
+  --sidebar-foreground: oklch(0.95 0.01 90);
+  --sidebar-accent: oklch(0.22 0.02 145);
+  --sidebar-border: oklch(0.28 0.02 145);
+  --warning: oklch(0.75 0.15 55);
+  --success: oklch(0.65 0.15 145);
+}
+
+@theme inline {
+  --font-sans: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scrollbar-width: thin;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "tnum" 1;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .ems-panel {
+    @apply min-w-0 overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm;
+  }
+  .ems-panel-header {
+    @apply flex flex-wrap items-center justify-between gap-2 border-b border-border/60 px-4 py-3;
+  }
+  .ems-panel-title {
+    @apply text-sm font-semibold tracking-tight text-foreground;
+  }
+  .ems-panel-subtitle {
+    @apply mt-0.5 text-xs leading-relaxed text-muted-foreground;
+  }
+  .ems-label {
+    @apply text-[11px] font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+  .ems-num {
+    font-variant-numeric: tabular-nums;
+  }
+  .ems-input {
+    @apply h-9 w-full min-w-0 rounded-md border border-border bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-60 aria-[invalid=true]:border-destructive;
+  }
+  .ems-table {
+    @apply w-full border-collapse text-sm;
+  }
+  .ems-table th {
+    @apply border-b border-border/70 bg-muted/40 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+  .ems-table td {
+    @apply border-b border-border/50 px-3 py-2 align-middle;
+  }
+  .ems-table tr:last-child td {
+    @apply border-b-0;
+  }
+}
+
+@keyframes ems-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.ems-skeleton {
+  @apply rounded-md bg-muted;
+  animation: ems-pulse 1.6s ease-in-out infinite;
+}
+.ems-hatch {
+  background-image: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in oklch, var(--muted-foreground) 25%, transparent) 3px 5px);
+}

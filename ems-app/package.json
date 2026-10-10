@@ -1,0 +1,35 @@
+{
+  "name": "scada-ems",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --webpack -H 0.0.0.0 -p 3016",
+    "build": "next build --webpack",
+    "start": "next start -H 127.0.0.1 -p 3016",
+    "migrate": "node scripts/migrate.ts",
+    "worker": "node scripts/worker.ts",
+    "test": "node --test tests/unit/*.test.ts",
+    "test:db": "node --test --test-concurrency=1 tests/db/*.test.ts",
+    "test:e2e": "node --test --test-concurrency=1 tests/e2e/*.test.ts",
+    "load": "node scripts/load-test.ts"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.564.0",
+    "next": "16.2.4",
+    "pg": "^8.16.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "recharts": "2.15.0",
+    "tailwind-merge": "^3.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.0",
+    "@types/node": "^22.15.0",
+    "@types/pg": "^8.15.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "tailwindcss": "^4.2.0",
+    "typescript": "5.7.3"
+  }
+}

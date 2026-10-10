@@ -1,0 +1,13 @@
+{
+  "name": "scada-ems-gateway",
+  "version": "1.0.0",
+  "description": "SCADA EMS Gateway — локальный агент опроса приборов учёта (Modbus TCP) с буферизацией и исходящей связью с облаком",
+  "private": true,
+  "type": "module",
+  "bin": { "ems-gateway": "src/cli.mjs" },
+  "engines": { "node": ">=18.17" },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "simulator": "node test/modbus-sim.mjs"
+  }
+}
