@@ -1,0 +1,31 @@
+{
+  "name": "scada-portal",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack -H 0.0.0.0 -p 3020",
+    "build": "next build --webpack && node scripts/prepare-standalone.mjs",
+    "start": "HOSTNAME=127.0.0.1 PORT=3020 node .next/standalone/server.js",
+    "db:ensure": "node --experimental-strip-types --no-warnings scripts/ensure-schema.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --no-warnings --import ./tests/unit/resolve-ts.mjs --test tests/unit/*.test.ts",
+    "test:e2e": "playwright test",
+    "stub:scada-id": "node tests/support/scada-id-stub.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/manrope": "5.2.8",
+    "next": "16.2.4",
+    "pg": "^8.16.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@tailwindcss/postcss": "^4.2.0",
+    "@types/node": "^22.15.0",
+    "@types/pg": "^8.15.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "tailwindcss": "^4.2.0",
+    "typescript": "5.7.3"
+  }
+}

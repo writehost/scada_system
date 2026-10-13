@@ -39,3 +39,6 @@ coverage/
 *.aab
 *.keystore
 *.jks
+
+# Портал scadasystem.io — отдельное приложение
+portal-app/
