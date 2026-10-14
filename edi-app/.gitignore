@@ -1,0 +1,6 @@
+node_modules
+.next
+.edi-storage
+*.tsbuildinfo
+.env*
+!.env.example
