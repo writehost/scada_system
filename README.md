@@ -31,3 +31,8 @@ Dev-сервер слушает `0.0.0.0:3000`. API без `DATABASE_URL` / бэ
 - `npm run dev` — webpack-dev на порту 3000
 - `npm run build` — `next build --webpack`
 - `npm run lint` — eslint
+
+## Другие приложения в репозитории
+
+- `yms-app/` — территория, КПП и доки: [docs/YMS.md](docs/YMS.md)
+- `edi-app/` — электронный документооборот SCADA EDI: [docs/EDI.md](docs/EDI.md)
