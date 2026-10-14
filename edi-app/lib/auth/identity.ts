@@ -60,7 +60,7 @@ export async function findOrgsForPerson(
   person: { login: string; externalCode?: string | null }
 ): Promise<EdiOrgAccess[]> {
   const r = await client.query<UserRow>(
-    `${USER_SELECT} AND (lower(u.login) = lower($1) OR ($2 <> '' AND u.external_code = $2))
+    `${USER_SELECT} AND (($2 = '' AND lower(u.login) = lower($1)) OR ($2 <> '' AND u.external_code = $2))
      ORDER BY s.site_id`,
     [person.login, person.externalCode ?? ""]
   )

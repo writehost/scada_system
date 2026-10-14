@@ -45,7 +45,7 @@ import { buildUpd, encodeCp1251 } from "./fixtures/upd.ts"
 const here = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(here, "..", "..")
 const PG = (process.env.E2E_PG || "postgres://postgres@127.0.0.1:5544").replace(/\/$/, "")
-const DB = "edi_e2e"
+const DB = "edi_e2e_" + randomUUID().replace(/-/g, "")
 const WMS_PORT = Number(process.env.E2E_WMS_PORT || 3105)
 const WMS_URL = `http://127.0.0.1:${WMS_PORT}`
 const WMS_TOKEN = "wmsu_e2e_" + randomUUID().replace(/-/g, "")
@@ -96,7 +96,6 @@ async function waitFor(url: string, ms: number) {
 before(async () => {
   const admin = new pg.Client({ connectionString: `${PG}/postgres` })
   await admin.connect()
-  await admin.query(`DROP DATABASE IF EXISTS ${DB} WITH (FORCE)`)
   await admin.query(`CREATE DATABASE ${DB}`)
   await admin.end()
   pool = poolFromUrl(`${PG}/${DB}?sslmode=disable`, 4)

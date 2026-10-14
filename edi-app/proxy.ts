@@ -1,10 +1,12 @@
+import { assertSameOrigin } from "./lib/auth/csrf.ts"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-const PUBLIC = ["/login", "/api/auth/login", "/api/auth/providers", "/api/auth/scada-id/", "/api/edi/files/shared/"]
+const PUBLIC = ["/login", "/api/health", "/api/auth/login", "/api/auth/providers", "/api/auth/scada-id/", "/api/edi/files/shared/"]
 
 /** Быстрый отсев без сессии; подпись и права проверяет каждый маршрут API на сервере. */
 export function proxy(req: NextRequest) {
+  try { assertSameOrigin(req) } catch { return NextResponse.json({ error: "Запрос должен выполняться с сайта SCADA EDI" }, { status: 403 }) }
   const { pathname } = req.nextUrl
   if (PUBLIC.some((p) => pathname === p || pathname.startsWith(p))) return NextResponse.next()
   const hasCookie = Boolean(req.cookies.get("edi_session")?.value)

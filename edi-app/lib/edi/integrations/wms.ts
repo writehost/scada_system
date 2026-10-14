@@ -1,3 +1,4 @@
+import { integrationFetch } from "../../outbound.ts"
 import type { PoolClient } from "pg"
 import { resolveIntegration } from "./config.ts"
 
@@ -67,7 +68,7 @@ export class WmsClient {
   private async call<T>(method: string, path: string, body?: unknown): Promise<T> {
     let res: Response
     try {
-      res = await fetch(`${this.baseUrl}${path}`, {
+      res = await integrationFetch(`${this.baseUrl}${path}`, {
         method,
         headers: {
           Authorization: `Bearer ${this.token}`,

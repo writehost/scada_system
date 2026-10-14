@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { loadScadaIdConfig } from "@/lib/auth/scada-id.ts"
 import { publicOrigin } from "@/lib/auth/origin.ts"
 import { tryGetPool } from "@/lib/db.ts"
+import { passwordEnabled } from "@/lib/auth/policy.ts"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -21,5 +22,5 @@ export async function GET(req: Request) {
       }
     }
   }
-  return NextResponse.json({ password: true, scadaId, database: Boolean(pool) })
+  return NextResponse.json({ password: passwordEnabled(), scadaId, database: Boolean(pool) })
 }

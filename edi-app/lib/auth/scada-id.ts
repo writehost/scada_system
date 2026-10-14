@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto"
 import type { PoolClient } from "pg"
 import { EDI_ROLES_FROM_SCADA } from "../edi/permissions.ts"
 import { hashPassword } from "./identity.ts"
+import { HttpError } from "../db.ts"
 
 /**
  * Вход через SCADA ID (Keycloak-реалм + API прав), тот же контракт, что использует WMS
@@ -32,7 +33,7 @@ export type ScadaIdPermissions = {
 
 export async function loadScadaIdConfig(client: PoolClient | null, origin: string): Promise<ScadaIdConfig | null> {
   let stored: Record<string, unknown> = {}
-  if (client) {
+  if (client && process.env.NODE_ENV !== "production") {
     const exists = await client.query<{ ok: boolean }>(`SELECT to_regclass('public.wms_app_settings') IS NOT NULL AS ok`)
     if (exists.rows[0]?.ok) {
       const r = await client.query<{ setting_value: Record<string, unknown> }>(
@@ -90,7 +91,7 @@ export async function exchangeCode(cfg: ScadaIdConfig, code: string, verifier: s
     cache: "no-store",
     signal: AbortSignal.timeout(10_000),
   })
-  return (await res.json().catch(() => ({}))) as { access_token?: string; error?: string; error_description?: string }
+  return (await res.json().catch(() => ({}))) as { access_token?: string; refresh_token?: string; expires_in?: number; error?: string; error_description?: string }
 }
 
 export async function resolvePermissions(cfg: ScadaIdConfig, accessToken: string): Promise<ScadaIdPermissions> {
@@ -119,12 +120,14 @@ export async function upsertUserFromScadaId(
   const login = email || perms.subject_id
   const displayName = perms.display_name?.trim() || email.split("@")[0] || "SCADA ID"
   const external = `scada-id:${perms.subject_id || perms.user_id}`
-  const found = await client.query<{ user_id: string }>(
-    `SELECT user_id::text FROM wms_users WHERE site_id = $1 AND (lower(login) = lower($2) OR external_code = $3)
+  const found = await client.query<{ user_id: string; external_code: string | null; is_active: boolean }>(
+    `SELECT user_id::text, external_code, is_active FROM wms_users WHERE site_id = $1 AND (lower(login) = lower($2) OR external_code = $3)
      ORDER BY CASE WHEN external_code = $3 THEN 0 ELSE 1 END LIMIT 1`,
     [siteId, login, external]
   )
   let userId = found.rows[0]?.user_id
+  if (userId && !found.rows[0].is_active) throw new HttpError(403, "Учётная запись SCADA System отключена")
+  if (userId && found.rows[0].external_code !== external) throw new HttpError(409, "Учётная запись с этим логином уже существует; администратор должен подтвердить связь со SCADA ID")
   if (!userId) {
     const ins = await client.query<{ user_id: string }>(
       `INSERT INTO wms_users (site_id, login, display_name, position, external_code, password_hash, is_active)
@@ -134,7 +137,7 @@ export async function upsertUserFromScadaId(
     userId = ins.rows[0].user_id
   } else {
     await client.query(
-      `UPDATE wms_users SET display_name = $2, external_code = COALESCE(NULLIF(external_code, ''), $3), is_active = TRUE
+      `UPDATE wms_users SET display_name = $2, external_code = COALESCE(NULLIF(external_code, ''), $3)
        WHERE user_id = $1::bigint`,
       [userId, displayName, external]
     )

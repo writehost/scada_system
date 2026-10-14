@@ -1,40 +1,64 @@
 import { route } from "@/lib/http.ts"
 import { subscribe } from "@/lib/edi/events.ts"
+import { withClient } from "@/lib/db.ts"
+import { getDocument } from "@/lib/edi/documents.ts"
+import { actorFromSession } from "@/lib/edi/actor.ts"
+import { currentOidcRoles } from "@/lib/auth/oidc-sessions.ts"
+import { publicOrigin } from "@/lib/auth/origin.ts"
+import { permissionsForRoles } from "@/lib/edi/permissions.ts"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-/** Server-Sent Events: изменения документов и новые уведомления (только идентификаторы). */
-export const GET = route(async ({ actor, req }) => {
+export const GET = route(async ({ actor, req, session }) => {
   const enc = new TextEncoder()
   let unsubscribe: (() => void) | null = null
   let ping: ReturnType<typeof setInterval> | null = null
-  const stream = new ReadableStream({
+  let expiry: ReturnType<typeof setTimeout> | null = null
+  let closed = false
+  let controllerRef: ReadableStreamDefaultController<Uint8Array> | null = null
+  const close = () => {
+    if (closed) return
+    closed = true
+    unsubscribe?.()
+    if (ping) clearInterval(ping)
+    if (expiry) clearTimeout(expiry)
+    req.signal.removeEventListener("abort", close)
+    try { controllerRef?.close() } catch { /* stream already closed */ }
+  }
+  const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
-      const send = (data: unknown) => controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`))
+      controllerRef = controller
+      req.signal.addEventListener("abort", close, { once: true })
+      if (req.signal.aborted) { close(); return }
+      const send = (data: unknown) => {
+        if (closed) return
+        try { controller.enqueue(enc.encode(`data: ${JSON.stringify(data)}\n\n`)) } catch { close() }
+      }
       send({ kind: "hello" })
-      unsubscribe = await subscribe((e) => {
-        if (e.siteId !== actor.siteId) return
-        if (e.userId && e.userId !== actor.userId) return
-        send({ kind: e.kind, documentId: e.documentId ?? null })
-      })
-      ping = setInterval(() => controller.enqueue(enc.encode(": ping\n\n")), 25_000)
-      req.signal.addEventListener("abort", () => {
-        unsubscribe?.()
-        if (ping) clearInterval(ping)
-        try {
-          controller.close()
-        } catch {
-          /* уже закрыт */
-        }
-      })
+      try {
+        unsubscribe = await subscribe((event) => {
+          if (closed || event.siteId !== actor.siteId || (event.userId && event.userId !== actor.userId)) return
+          void withClient(async (client) => {
+            const current = await actorFromSession(client, session)
+            if (session.via === "scada-id") {
+              current.roles = await currentOidcRoles(client, session, publicOrigin(req))
+              current.permissions = permissionsForRoles(current.roles)
+            }
+            if (event.documentId) await getDocument(client, current, event.documentId)
+            send({ kind: event.kind, documentId: event.documentId ?? null })
+          }).catch(() => undefined)
+        })
+        if (closed) { unsubscribe(); return }
+        ping = setInterval(() => { if (!closed) { try { controller.enqueue(enc.encode(": ping\n\n")) } catch { close() } } }, 25_000)
+        // Browser reconnect performs a fresh session and authority check.
+        expiry = setTimeout(close, Math.max(1, Math.min(60_000, session.exp - Date.now())))
+      } catch { close() }
     },
-    cancel() {
-      unsubscribe?.()
-      if (ping) clearInterval(ping)
-    },
+    cancel: close,
   })
-  return new Response(stream, {
-    headers: { "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform", Connection: "keep-alive", "X-Accel-Buffering": "no" },
-  })
+  return new Response(stream, { headers: {
+    "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive", "X-Accel-Buffering": "no",
+  } })
 })

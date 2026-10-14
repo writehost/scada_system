@@ -16,6 +16,7 @@ export type EdiOrgAccess = {
 }
 
 export type EdiSession = {
+  sid?: string
   userId: string
   login: string
   fio: string
@@ -28,7 +29,8 @@ export type EdiSession = {
 }
 
 function getSecret(): string {
-  const secret = (process.env.EDI_AUTH_SECRET || process.env.WMS_AUTH_SECRET || "").trim()
+  const secret = (process.env.EDI_AUTH_SECRET || (process.env.NODE_ENV !== "production" ? process.env.WMS_AUTH_SECRET : "") || "").trim()
+  if (process.env.NODE_ENV === "production" && secret.length < 32) throw new Error("EDI_AUTH_SECRET must have at least 32 characters")
   if (secret) return secret
   if (process.env.NODE_ENV === "production") throw new Error("EDI_AUTH_SECRET is not set")
   return "dev-edi-auth-secret-change-me"
@@ -89,6 +91,8 @@ export async function verifySessionToken(token: string): Promise<EdiSession | nu
   const payload = await verifyPayload<EdiSession>(token)
   if (!payload?.userId || !payload.siteId || typeof payload.exp !== "number") return null
   if (payload.exp < Date.now()) return null
+  if (!Array.isArray(payload.orgs) || !["password", "scada-id"].includes(payload.via)) return null
+  if (process.env.NODE_ENV === "production" && process.env.EDI_ALLOW_PASSWORD_LOGIN !== "1" && payload.via !== "scada-id") return null
   const revokedBefore = Date.parse(process.env.EDI_AUTH_REVOKED_BEFORE || "")
   if (Number.isFinite(revokedBefore) && payload.iat < revokedBefore) return null
   return payload

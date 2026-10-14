@@ -1,0 +1,50 @@
+services:
+  edi:
+    image: ${EDI_IMAGE:?Set EDI_IMAGE to the validated release image}
+    container_name: scada-edi
+    restart: unless-stopped
+    env_file: /etc/scada-edi/runtime.env
+    ports:
+      - "127.0.0.1:3017:3016"
+    volumes:
+      - /var/lib/scada-edi/storage:/var/lib/scada-edi/storage
+    networks: [proxy]
+    read_only: true
+    tmpfs: [/tmp:size=64m]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    cpus: 0.75
+    stop_grace_period: 45s
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3016/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+  worker:
+    image: ${EDI_IMAGE:?Set EDI_IMAGE to the validated release image}
+    container_name: scada-edi-worker
+    profiles: [worker]
+    restart: unless-stopped
+    command: [node, --experimental-strip-types, scripts/worker.ts]
+    env_file: /etc/scada-edi/runtime.env
+    volumes:
+      - /var/lib/scada-edi/storage:/var/lib/scada-edi/storage
+    networks: [proxy]
+    read_only: true
+    tmpfs: [/tmp:size=64m]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 256m
+    cpus: 0.25
+    stop_grace_period: 90s
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+networks:
+  proxy:
+    external: true
+    name: alpaca_default

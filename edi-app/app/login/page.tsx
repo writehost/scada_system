@@ -12,12 +12,14 @@ function LoginForm() {
   const [error, setError] = useState(params.get("error") || "")
   const [busy, setBusy] = useState(false)
   const [scadaId, setScadaId] = useState(false)
+  const [passwordAllowed, setPasswordAllowed] = useState(false)
+  const [loaded, setLoaded] = useState(false)
   const next = params.get("next") || "/"
   useEffect(() => {
     fetch("/api/auth/providers")
       .then((r) => r.json())
-      .then((d) => setScadaId(Boolean(d.scadaId)))
-      .catch(() => setScadaId(false))
+      .then((d) => { setScadaId(Boolean(d.scadaId)); setPasswordAllowed(Boolean(d.password)); setLoaded(true) })
+      .catch(() => { setScadaId(false); setLoaded(true) })
   }, [])
   return (
     <main className="grid min-h-full place-items-center p-4">
@@ -34,14 +36,14 @@ function LoginForm() {
             <Button variant="primary" className="h-10 w-full" icon={<Fingerprint className="size-4" />} onClick={() => (window.location.href = `/api/auth/scada-id/start?next=${encodeURIComponent(next)}`)}>
               Войти через SCADA ID
             </Button>
-            <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground">
+            {passwordAllowed && <div className="my-4 flex items-center gap-3 text-[11px] uppercase tracking-wide text-muted-foreground">
               <span className="h-px flex-1 bg-border" />
               или учётной записью WMS
               <span className="h-px flex-1 bg-border" />
-            </div>
+            </div>}
           </>
         )}
-        <form
+        {passwordAllowed && <form
           className="space-y-2.5"
           onSubmit={async (e) => {
             e.preventDefault()
@@ -64,7 +66,9 @@ function LoginForm() {
           <Button type="submit" variant={scadaId ? "outline" : "primary"} className="h-10 w-full" busy={busy}>
             Войти
           </Button>
-        </form>
+        </form>}
+        {!passwordAllowed && <ErrorLine error={error} />}
+        {loaded && !scadaId && !passwordAllowed && <p className="text-sm text-muted-foreground">Вход временно недоступен: администратор завершает подключение SCADA ID.</p>}
         <p className="mt-4 text-xs text-muted-foreground">Учётные записи и организации общие для экосистемы SCADA System — отдельной регистрации в EDI нет.</p>
       </section>
     </main>

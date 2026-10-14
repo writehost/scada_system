@@ -54,7 +54,7 @@ export async function loadUserRoles(
 }
 
 export async function actorFromSession(client: PoolClient, session: EdiSession): Promise<Actor> {
-  const org = session.orgs.find((o) => o.siteId === session.siteId)
+  const org = session.orgs.find((o) => o.siteId === session.siteId && o.userId === session.userId)
   if (!org) throw new HttpError(403, "Нет доступа к организации", "org_forbidden")
   const roles = await loadUserRoles(client, session.siteId, session.userId)
   if (!roles.active) throw new HttpError(401, "Пользователь отключён", "user_inactive")

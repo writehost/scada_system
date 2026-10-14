@@ -1,11 +1,14 @@
 import type { PoolClient } from "pg"
+import { createHash } from "node:crypto"
+import { GATEWAY_DDL } from "./gateway/schema.ts"
+import { OIDC_SESSIONS_DDL } from "../auth/oidc-sessions.ts"
 
 /**
  * Схема EDI в общей базе wms_edge. Только добавляющие операции (CREATE ... IF NOT EXISTS,
  * ADD COLUMN IF NOT EXISTS): существующие таблицы WMS не изменяются и не удаляются.
  * Организация = wms_sites (арендатор SaaS), пользователь = wms_users.
  */
-export const EDI_SCHEMA_VERSION = 1
+export const EDI_SCHEMA_VERSION = 3
 
 const DDL = `
 CREATE TABLE IF NOT EXISTS edi_schema_meta (
@@ -598,18 +601,57 @@ CREATE TABLE IF NOT EXISTS edi_retention_rules (
 );
 `
 
+const MIGRATIONS = [
+  { version: 1, name: "baseline", sql: DDL },
+  { version: 2, name: "provider_gateway", sql: GATEWAY_DDL },
+  { version: 3, name: "oidc_sessions", sql: OIDC_SESSIONS_DDL },
+]
+
+/** Refuse unknown legacy schema drift rather than marking an incompatible schema as migrated. */
+async function checkBaseline(client: PoolClient) {
+  for (const match of DDL.matchAll(/CREATE TABLE IF NOT EXISTS (edi_\w+) \(([\s\S]*?)\n\);/g)) {
+    const expected = [...match[2].matchAll(/^  ([a-z_]+) (?:INT|BIGINT|BIGSERIAL|TEXT|BOOLEAN|DATE|TIMESTAMPTZ|JSONB|NUMERIC|BYTEA)/gm)].map((m) => m[1])
+    const columns = await client.query<{ column_name: string }>(
+      "SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1", [match[1]])
+    const missing = expected.filter((column) => !columns.rows.some((r) => r.column_name === column))
+    if (missing.length) throw new Error(`Schema drift: ${match[1]} missing ${missing.join(", ")}; explicit repair migration required`)
+  }
+}
+
 export async function ensureEdiSchema(client: PoolClient): Promise<void> {
   await client.query("SELECT pg_advisory_lock(hashtext('edi_schema'))")
   try {
-    await client.query(DDL)
-    await client.query(
-      `INSERT INTO edi_schema_meta (id, version) VALUES (1, $1)
-       ON CONFLICT (id) DO UPDATE SET version = GREATEST(edi_schema_meta.version, EXCLUDED.version), updated_at = now()`,
-      [EDI_SCHEMA_VERSION]
-    )
+    await client.query("BEGIN")
+    await client.query(`CREATE TABLE IF NOT EXISTS edi_schema_migrations (
+      version INT PRIMARY KEY, name TEXT NOT NULL, checksum TEXT NOT NULL, applied_at TIMESTAMPTZ NOT NULL DEFAULT now())`)
+    const latest = await client.query<{ version: number }>("SELECT COALESCE(max(version), 0)::int AS version FROM edi_schema_migrations")
+    if (latest.rows[0].version > EDI_SCHEMA_VERSION) throw new Error("Database has newer EDI migrations; application downgrade is not permitted")
+    for (const migration of MIGRATIONS) {
+      const checksum = createHash("sha256").update(migration.sql).digest("hex")
+      const applied = await client.query<{ checksum: string }>("SELECT checksum FROM edi_schema_migrations WHERE version = $1", [migration.version])
+      if (applied.rows[0]) {
+        if (applied.rows[0].checksum !== checksum) throw new Error(`Migration ${migration.version} checksum changed`)
+        continue
+      }
+      await client.query(migration.sql)
+      if (migration.version === 1) await checkBaseline(client)
+      await client.query("INSERT INTO edi_schema_migrations (version, name, checksum) VALUES ($1, $2, $3)", [migration.version, migration.name, checksum])
+    }
+    await checkBaseline(client)
+    await client.query(`INSERT INTO edi_schema_meta (id, version) VALUES (1, $1)
+      ON CONFLICT (id) DO UPDATE SET version = EXCLUDED.version, updated_at = now()`, [EDI_SCHEMA_VERSION])
+    await client.query("COMMIT")
+  } catch (error) {
+    await client.query("ROLLBACK")
+    throw error
   } finally {
     await client.query("SELECT pg_advisory_unlock(hashtext('edi_schema'))")
   }
+}
+
+export async function assertSchemaReady(client: PoolClient): Promise<void> {
+  const version = await client.query<{ version: number }>("SELECT version FROM edi_schema_meta WHERE id = 1")
+  if (version.rows[0]?.version !== EDI_SCHEMA_VERSION) throw new Error("EDI migrations must be applied before starting the service")
 }
 
 let ensured: Promise<void> | null = null
@@ -618,8 +660,8 @@ let ensured: Promise<void> | null = null
 export function ensureOnce(client: PoolClient, seed: (c: PoolClient) => Promise<void>): Promise<void> {
   if (!ensured) {
     ensured = (async () => {
-      await ensureEdiSchema(client)
-      await seed(client)
+      if (process.env.NODE_ENV === "production") await assertSchemaReady(client)
+      else { await ensureEdiSchema(client); await seed(client) }
     })().catch((e) => {
       ensured = null
       throw e

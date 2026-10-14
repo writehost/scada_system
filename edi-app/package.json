@@ -8,14 +8,15 @@
     "start": "next start -H 127.0.0.1 -p 3016",
     "typecheck": "tsc --noEmit",
     "ensure": "node --experimental-strip-types scripts/ensure.ts",
-    "test": "node --experimental-strip-types --test scripts/test-unit.ts",
-    "test:e2e": "node --experimental-strip-types --test scripts/test-e2e.ts"
+    "test": "node --experimental-strip-types --test scripts/test-unit.ts scripts/test-security.ts",
+    "test:e2e": "node --experimental-strip-types --test scripts/test-e2e.ts",
+    "worker": "node --experimental-strip-types scripts/worker.ts"
   },
   "dependencies": {
     "crypto-pro": "^2.5.2",
     "fflate": "^0.8.3",
     "lucide-react": "^0.564.0",
-    "next": "16.2.4",
+    "next": "16.4.0",
     "pg": "^8.16.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"

@@ -6,8 +6,13 @@ import { HttpError, withClient } from "./db.ts"
 import { actorFromSession, type Actor } from "./edi/actor.ts"
 import { ensureOnce } from "./edi/schema.ts"
 import { seedReference } from "./edi/seed.ts"
+import { assertSameOrigin } from "./auth/csrf.ts"
+import { boundedBody } from "./body.ts"
+import { currentOidcRoles } from "./auth/oidc-sessions.ts"
+import { publicOrigin } from "./auth/origin.ts"
+import { permissionsForRoles } from "./edi/permissions.ts"
 
-export type Ctx = { req: Request; client: PoolClient; actor: Actor; params: Record<string, string> }
+export type Ctx = { req: Request; client: PoolClient; actor: Actor; params: Record<string, string>; session: EdiSession }
 
 type Handler = (ctx: Ctx) => Promise<unknown>
 
@@ -37,6 +42,7 @@ export async function prepare(client: PoolClient) {
 export function route(handler: Handler, opts: { tx?: boolean } = {}) {
   return async (req: Request, segment?: { params?: Promise<Record<string, string>> }) => {
     try {
+      assertSameOrigin(req)
       const token = readCookie(req, EDI_SESSION_COOKIE) || bearer(req)
       const apiToken = token.startsWith("wmsu_")
       let session: EdiSession | null = token && !apiToken ? await verifySessionToken(token) : null
@@ -49,10 +55,14 @@ export function route(handler: Handler, opts: { tx?: boolean } = {}) {
         if (apiToken) session = await sessionFromWmsApiToken(client, token)
         if (!session) throw new HttpError(401, "Токен недействителен", "auth_required")
         const actor = await actorFromSession(client, session)
-        if (!opts.tx) return handler({ req, client, actor, params })
+        if (session.via === "scada-id") {
+          actor.roles = await currentOidcRoles(client, session, publicOrigin(req))
+          actor.permissions = permissionsForRoles(actor.roles)
+        }
+        if (!opts.tx) return handler({ req, client, actor, params, session })
         await client.query("BEGIN")
         try {
-          const out = await handler({ req, client, actor, params })
+          const out = await handler({ req, client, actor, params, session })
           await client.query("COMMIT")
           return out
         } catch (e) {
@@ -77,8 +87,9 @@ export async function jsonBody<T = Record<string, unknown>>(req: Request): Promi
   const len = Number(req.headers.get("content-length") || 0)
   if (len > 2 * 1024 * 1024) throw new HttpError(413, "Слишком большой запрос", "too_large")
   try {
-    return (await req.json()) as T
-  } catch {
+    return JSON.parse(new TextDecoder().decode(await boundedBody(req, 2 * 1024 * 1024))) as T
+  } catch (e) {
+    if (e instanceof HttpError) throw e
     throw new HttpError(400, "Некорректный JSON", "bad_json")
   }
 }

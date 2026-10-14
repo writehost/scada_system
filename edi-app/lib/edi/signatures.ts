@@ -1,3 +1,4 @@
+import { integrationFetch } from "../outbound.ts"
 import type { PoolClient } from "pg"
 import { HttpError } from "../db.ts"
 import { requirePermission, type Actor } from "./actor.ts"
@@ -262,7 +263,7 @@ export async function verifySignature(client: PoolClient, siteId: number, signat
     } else {
       try {
         const [doc, sigFile] = await Promise.all([readFileChecked(client, siteId, sig.signed_file_id), readFileChecked(client, siteId, sig.signature_file_id)])
-        const res = await fetch(String(svc.config.verifyUrl), {
+        const res = await integrationFetch(String(svc.config.verifyUrl), {
           method: "POST",
           headers: { "Content-Type": "application/json", ...(svc.secret ? { Authorization: `Bearer ${svc.secret}` } : {}) },
           body: JSON.stringify({ signature: Buffer.from(sigFile.bytes).toString("base64"), content: Buffer.from(doc.bytes).toString("base64"), detached: true }),

@@ -14,6 +14,8 @@ export function poolFromUrl(url: string, max = 6): Pool {
     database: parsed.pathname.replace(/^\/+/, ""),
     ssl: sslmode === "disable" || !sslmode ? false : { rejectUnauthorized: sslmode === "verify-full" },
     max,
+    connectionTimeoutMillis: 10_000,
+    idleTimeoutMillis: 30_000,
   })
 }
 

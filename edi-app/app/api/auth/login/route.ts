@@ -2,18 +2,22 @@ import { NextResponse } from "next/server"
 import { passwordLogin } from "@/lib/auth/identity.ts"
 import { createSessionToken, EDI_SESSION_COOKIE, sessionCookieOptions, SESSION_TTL_SEC } from "@/lib/auth/session.ts"
 import { withClient } from "@/lib/db.ts"
-import { errorResponse, prepare } from "@/lib/http.ts"
+import { errorResponse, prepare, jsonBody } from "@/lib/http.ts"
 import { recordEvent } from "@/lib/edi/audit.ts"
+import { passwordEnabled } from "@/lib/auth/policy.ts"
+import { assertSameOrigin } from "@/lib/auth/csrf.ts"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function POST(req: Request) {
+  if (!passwordEnabled()) return NextResponse.json({ error: "Используйте вход через SCADA ID" }, { status: 403 })
+  try { assertSameOrigin(req) } catch (e) { return errorResponse(e) }
   let body: { login?: string; password?: string; siteCode?: string }
   try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Некорректный запрос" }, { status: 400 })
+    body = await jsonBody(req)
+  } catch (e) {
+    return errorResponse(e)
   }
   const login = String(body.login ?? "").trim()
   const password = String(body.password ?? "")

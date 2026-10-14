@@ -6,6 +6,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
  */
 function key(): Buffer {
   const raw = (process.env.EDI_SECRET_KEY || "").trim()
+  if (process.env.NODE_ENV === "production" && raw.length < 32) throw new Error("EDI_SECRET_KEY must have at least 32 characters")
   if (!raw) {
     if (process.env.NODE_ENV === "production") throw new Error("EDI_SECRET_KEY is not set")
     return createHash("sha256").update("dev-edi-secret-key").digest()

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { authorizeUrl, loadScadaIdConfig, newPkce } from "@/lib/auth/scada-id.ts"
 import { publicOrigin } from "@/lib/auth/origin.ts"
 import { tryGetPool } from "@/lib/db.ts"
+import { safeReturnPath } from "@/lib/auth/policy.ts"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -19,7 +20,7 @@ export async function GET(req: Request) {
     const res = NextResponse.redirect(authorizeUrl(cfg, pkce))
     res.cookies.set(
       "edi_oidc",
-      JSON.stringify({ state: pkce.state, verifier: pkce.verifier, next: next.startsWith("/") && !next.startsWith("//") ? next : "/", siteCode: url.searchParams.get("siteCode") || "" }),
+      JSON.stringify({ state: pkce.state, verifier: pkce.verifier, next: safeReturnPath(next), siteCode: url.searchParams.get("siteCode") || "" }),
       { httpOnly: true, sameSite: "lax", secure: origin.startsWith("https://"), path: "/", maxAge: 600 }
     )
     return res

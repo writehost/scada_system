@@ -1,5 +1,7 @@
 "use client"
 
+import { ProviderConnections } from "@/components/provider-connections"
+
 import { useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useRef, useState } from "react"
 import { api, fmtDate, fmtDateTime, relTime, useApi } from "@/components/api"
@@ -8,7 +10,7 @@ import { Badge, Button, ErrorLine, Field, Input, Select, Spinner, Tabs, toast } 
 import { ACTION_LABEL } from "@/lib/edi/audit.ts"
 import { NOTIFY_EVENTS } from "@/lib/edi/notify.ts"
 
-type Tab = "org" | "users" | "integrations" | "plan" | "formats" | "retention" | "webhooks" | "audit"
+type Tab = "operators" | "org" | "users" | "integrations" | "plan" | "formats" | "retention" | "webhooks" | "audit"
 
 function Admin() {
   const sp = useSearchParams()
@@ -24,6 +26,7 @@ function Admin() {
           { value: "org", label: "Организация" },
           { value: "users", label: "Пользователи и роли" },
           { value: "integrations", label: "Интеграции" },
+          { value: "operators", label: "Операторы ЭДО" },
           { value: "plan", label: "Тариф и лимиты" },
           { value: "formats", label: "Форматы" },
           { value: "retention", label: "Хранение" },
@@ -35,6 +38,7 @@ function Admin() {
         {tab === "org" && <OrgTab />}
         {tab === "users" && <UsersTab />}
         {tab === "integrations" && <IntegrationsTab />}
+        {tab === "operators" && <ProviderConnections />}
         {tab === "plan" && <PlanTab />}
         {tab === "formats" && <FormatsTab />}
         {tab === "retention" && <RetentionTab />}

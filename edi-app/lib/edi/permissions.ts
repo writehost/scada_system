@@ -4,6 +4,8 @@
  * Все проверки выполняются на сервере; скрытие кнопок на клиенте — только удобство.
  */
 
+import { wmsRoleFallbackEnabled } from "../auth/policy.ts"
+
 export const EDI_PERMISSIONS = [
   "edi.doc.read",
   "edi.doc.read_confidential",
@@ -71,6 +73,7 @@ export const EDI_ROLES_FROM_SCADA: Record<string, string[]> = {
 export function effectiveEdiRoles(wmsRoles: string[], ediRoles: string[]): string[] {
   const explicit = ediRoles.filter((r) => r in EDI_ROLES)
   if (explicit.length > 0) return [...new Set(explicit)].sort()
+  if (!wmsRoleFallbackEnabled()) return []
   const out = new Set<string>()
   for (const role of wmsRoles) for (const r of EDI_DEFAULTS_FROM_WMS[role] ?? []) out.add(r)
   return [...out].sort()

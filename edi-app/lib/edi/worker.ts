@@ -1,6 +1,7 @@
+import { integrationFetch } from "../outbound.ts"
 import { createHmac } from "node:crypto"
 import type { Pool, PoolClient } from "pg"
-import { ensureEdiSchema } from "./schema.ts"
+import { ensureOnce } from "./schema.ts"
 import { seedReference } from "./seed.ts"
 import { wmsClientFor } from "./integrations/wms.ts"
 import { mailConfigured, sendMail } from "./mailer.ts"
@@ -41,10 +42,11 @@ async function deliver(client: PoolClient): Promise<number> {
             n.title, n.body, n.document_id::text, n.user_id::text, n.event
      FROM edi_deliveries d LEFT JOIN edi_notifications n ON n.notification_id = d.notification_id
      WHERE d.status IN ('queued','retry') AND d.next_attempt_at <= now()
-     ORDER BY d.delivery_id LIMIT 50 FOR UPDATE OF d SKIP LOCKED`
+     ORDER BY d.delivery_id LIMIT 50`
   )
   let done = 0
   for (const d of r.rows) {
+    await client.query("BEGIN")
     const origin = (process.env.EDI_PUBLIC_ORIGIN || "").replace(/\/$/, "")
     const link = d.document_id && origin ? `${origin}/documents?id=${d.document_id}` : ""
     try {
@@ -62,9 +64,9 @@ async function deliver(client: PoolClient): Promise<number> {
         if (!hook?.is_active) throw new Error("Вебхук отключён")
         const body = JSON.stringify(d.payload)
         const ts = String(Math.floor(Date.now() / 1000))
-        const res = await fetch(hook.url, {
+        const res = await integrationFetch(hook.url, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-EDI-Timestamp": ts, "X-EDI-Signature": `v1=${webhookSignature(decryptSecret(hook.secret_enc), ts, body)}` },
+          headers: { "Content-Type": "application/json", "Idempotency-Key": `edi-delivery:${d.delivery_id}`, "X-EDI-Timestamp": ts, "X-EDI-Signature": `v1=${webhookSignature(decryptSecret(hook.secret_enc), ts, body)}` },
           body,
           signal: AbortSignal.timeout(10_000),
         })
@@ -77,9 +79,10 @@ async function deliver(client: PoolClient): Promise<number> {
       const final = attempts >= BACKOFF_MIN.length
       await client.query(
         `UPDATE edi_deliveries SET status = $2, attempts = $3, last_error = $4, next_attempt_at = now() + make_interval(mins => $5) WHERE delivery_id = $1::bigint`,
-        [d.delivery_id, final ? "failed" : "retry", attempts, (e instanceof Error ? e.message : String(e)).slice(0, 500), BACKOFF_MIN[Math.min(attempts, BACKOFF_MIN.length - 1)]]
+        [d.delivery_id, final ? "failed" : "retry", attempts, (e instanceof Error ? e.message : String(e)).slice(0, 500), BACKOFF_MIN[Math.min(attempts - 1, BACKOFF_MIN.length - 1)]]
       )
     }
+    await client.query("COMMIT")
   }
   return done
 }
@@ -90,8 +93,7 @@ export async function runTick(pool: Pool): Promise<Record<string, unknown>> {
     const lock = await client.query<{ ok: boolean }>(`SELECT pg_try_advisory_lock(hashtext('edi_worker')) AS ok`)
     if (!lock.rows[0].ok) return { skipped: true }
     try {
-      await ensureEdiSchema(client)
-      await seedReference(client)
+      await ensureOnce(client, seedReference)
       await client.query("BEGIN")
       const deadlines = await processDeadlines(client)
       await client.query("COMMIT")
@@ -110,11 +112,10 @@ export async function runTick(pool: Pool): Promise<Record<string, unknown>> {
           receipts[s.site_code] = { error: e instanceof Error ? e.message : String(e) }
         }
       }
-      await client.query("BEGIN")
       const delivered = await deliver(client)
-      await client.query("COMMIT")
       return { deadlines, receipts, delivered }
     } finally {
+      await client.query("ROLLBACK").catch(() => undefined)
       await client.query(`SELECT pg_advisory_unlock(hashtext('edi_worker'))`)
     }
   } catch (e) {
@@ -125,11 +126,18 @@ export async function runTick(pool: Pool): Promise<Record<string, unknown>> {
   }
 }
 
-let timer: ReturnType<typeof setInterval> | null = null
-
-export function startWorker(pool: Pool, intervalMs = 60_000) {
-  if (timer) return
-  const tick = () => runTick(pool).catch((e) => console.error("[edi-worker]", e))
-  timer = setInterval(tick, intervalMs)
-  setTimeout(tick, 5_000)
+/** Sequential loop: a slow tick cannot start a second local tick. Stop waits for active work. */
+export function startWorker(pool: Pool, intervalMs = 60_000): () => Promise<void> {
+  if (!Number.isFinite(intervalMs) || intervalMs < 1000) throw new Error("Invalid worker interval")
+  let stopping = false
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let active: Promise<void> = Promise.resolve()
+  const tick = () => {
+    if (stopping) return
+    active = runTick(pool).then(() => undefined).catch(() => console.error("[edi-worker] tick failed")).finally(() => {
+      if (!stopping) timer = setTimeout(tick, intervalMs)
+    })
+  }
+  timer = setTimeout(tick, 5000)
+  return async () => { stopping = true; if (timer) clearTimeout(timer); await active }
 }

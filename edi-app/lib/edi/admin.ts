@@ -1,3 +1,4 @@
+import { integrationFetch } from "../outbound.ts"
 import { randomBytes } from "node:crypto"
 import type { PoolClient } from "pg"
 import { HttpError } from "../db.ts"
@@ -143,7 +144,7 @@ export async function checkIntegration(client: PoolClient, actor: Actor, kind: I
     }
   } else if (kind === "signature") {
     try {
-      const res = await fetch(String(cfg.config.verifyUrl), { method: "OPTIONS", signal: AbortSignal.timeout(8000) })
+      const res = await integrationFetch(String(cfg.config.verifyUrl), { method: "OPTIONS", signal: AbortSignal.timeout(8000) })
       result = { ok: res.status < 500, message: `Сервис ответил ${res.status}` }
     } catch (e) {
       result = { ok: false, message: e instanceof Error ? e.message : String(e) }
