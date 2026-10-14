@@ -4,6 +4,7 @@ import { can, requirePermission, type Actor } from "./actor.ts"
 import { actorEvent, recordEvent } from "./audit.ts"
 import { DOC_TYPES, docType, isEditableStatus, MANUAL_TRANSITIONS, STATUS_LABEL, type DocTypeDef } from "./doc-types.ts"
 import { computeLine, num, sumLines } from "./money.ts"
+import { saveFile } from "./files.ts"
 import { enforceLimits } from "./saas.ts"
 import { sha256Hex } from "./storage.ts"
 
@@ -618,6 +619,37 @@ export async function grantAccess(client: PoolClient, actor: Actor, documentId: 
     [documentId, userId, access, actor.userId]
   )
   await recordEvent(client, actorEvent(actor, "document.access", documentId, { userId, access }))
+}
+
+/**
+ * Файл текущей версии для подписи документов, созданных в EDI: канонический JSON снимка версии
+ * (тот же, по которому считается content_hash). Подпись ставится на эти байты; печатная форма — отдельное представление.
+ */
+export async function freezeVersionFile(client: PoolClient, actor: Actor, documentId: string) {
+  const doc = await getDocument(client, actor, documentId)
+  const existing = await client.query<{ file_id: string }>(
+    `SELECT file_id::text FROM edi_files WHERE document_id = $1::bigint AND version_no = $2 AND kind = 'version' LIMIT 1`,
+    [documentId, doc.currentVersion]
+  )
+  if (existing.rows[0]) return { fileId: existing.rows[0].file_id }
+  const v = await client.query<{ snapshot: unknown; content_hash: string }>(
+    `SELECT snapshot, content_hash FROM edi_document_versions WHERE document_id = $1::bigint AND version_no = $2`,
+    [documentId, doc.currentVersion]
+  )
+  if (!v.rows[0]) throw new HttpError(404, "Версия не найдена", "not_found")
+  const body = JSON.stringify({ documentId, version: doc.currentVersion, contentHash: v.rows[0].content_hash, snapshot: stable(v.rows[0].snapshot) }, null, 2)
+  const f = await saveFile(client, {
+    siteId: actor.siteId,
+    documentId,
+    versionNo: doc.currentVersion,
+    kind: "version",
+    fileName: `document-${documentId}-v${doc.currentVersion}.json`,
+    bytes: new TextEncoder().encode(body),
+    mime: "application/json",
+    uploadedBy: actor.userId,
+  })
+  await recordEvent(client, actorEvent(actor, "document.file_added", documentId, { kind: "version", version: doc.currentVersion }))
+  return { fileId: f.fileId }
 }
 
 export { loadLines, writeVersion, DOC_TYPES }

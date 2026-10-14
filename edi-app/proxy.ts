@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server"
 const PUBLIC = ["/login", "/api/auth/login", "/api/auth/providers", "/api/auth/scada-id/", "/api/edi/files/shared/"]
 
 /** Быстрый отсев без сессии; подпись и права проверяет каждый маршрут API на сервере. */
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
   if (PUBLIC.some((p) => pathname === p || pathname.startsWith(p))) return NextResponse.next()
   const hasCookie = Boolean(req.cookies.get("edi_session")?.value)

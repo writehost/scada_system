@@ -4,6 +4,7 @@ import {
   addComment,
   archiveDocument,
   deleteDraft,
+  freezeVersionFile,
   grantAccess,
   relateDocuments,
   setStatus,
@@ -74,6 +75,9 @@ export const POST = route(async ({ client, actor, params, req }) => {
       break
     case "discrepancy_act":
       result = await createDiscrepancyAct(client, actor, id)
+      break
+    case "freeze_version":
+      result = await freezeVersionFile(client, actor, id)
       break
     case "send_edo":
       result = await sendViaEdo(client, actor, id)
