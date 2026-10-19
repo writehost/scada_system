@@ -5,6 +5,8 @@ Tagline: *Visual orchestration for industrial operations.*
 
 Live canvas: https://claude.ai/artifact/CErFpXmWh3j5RgKDqz7zdo (private until it is shared from the canvas's Share menu)
 
+Rendered previews of every screen are in `screenshots/`.
+
 This is a design concept only. It is not wired into the Next.js app and is not served by it.
 
 ## Screens

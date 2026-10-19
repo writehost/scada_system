@@ -28,7 +28,7 @@ a{color:#C6F432;text-decoration:none}a:hover{color:#DDFF6E}
 @media (prefers-reduced-motion:reduce){.flowline{animation:none}.tcard:hover{transform:none}}
 </style>
 </helmet>
-<div class="sf" style="min-height: 1180px; background: radial-gradient(900px 480px at 80% 20%, rgba(198,244,50,0.07), transparent 65%), #060708">
+<div class="sf" style="min-height: 1280px; background: radial-gradient(900px 480px at 80% 20%, rgba(198,244,50,0.07), transparent 65%), #060708">
 
 <header style="max-width: 1320px; margin: 0 auto; padding: 22px 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap">
   <div style="display: flex; align-items: center; gap: 28px">
@@ -69,7 +69,7 @@ a{color:#C6F432;text-decoration:none}a:hover{color:#DDFF6E}
   </div>
 
   <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; padding-bottom: 72px">
-    <div style="flex: 999 1 600px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(268px, 100%), 1fr)); gap: 14px">
+    <div style="flex: 999 1 600px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: 14px">
       <sc-for list="{{cards}}" as="t" hint-placeholder-count="8">
         <button class="tcard" type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}" style="background: {{t.bg}}; border: 1px solid {{t.border}}; box-shadow: {{t.shadow}}">
           <span style="display: flex; align-items: center; justify-content: space-between; width: 100%">
@@ -138,7 +138,7 @@ a{color:#C6F432;text-decoration:none}a:hover{color:#DDFF6E}
 </section>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1180}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1280}}'>
 const T = [
   { id: 'receiving', area: 'Warehouse', name: 'Pallet receiving automation', desc: 'Scan, verify, place and post a pallet without touching a keyboard.',
     long: 'Every inbound pallet is scanned at the dock, its codes verified, a FEFO cell assigned, the SSCC label printed and the goods receipt posted to ERP.',

@@ -82,11 +82,11 @@ a{color:#C6F432;text-decoration:none}a:hover{color:#DDFF6E}
 
 <div style="flex: 1; display: flex; flex-wrap: wrap; align-items: stretch; min-height: 0">
 
-  <aside aria-label="Block library" style="flex: 1 1 236px; max-width: 100%; box-sizing: border-box; padding: 16px 12px; border-right: 1px solid rgba(255,255,255,0.07); background: #0A0B0D; display: flex; flex-direction: column; gap: 14px">
+  <aside aria-label="Block library" style="flex: 1 1 228px; max-width: 100%; box-sizing: border-box; padding: 16px 12px; border-right: 1px solid rgba(255,255,255,0.07); background: #0A0B0D; display: flex; flex-direction: column; gap: 14px">
     <label style="display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: 10px; background: rgba(255,255,255,0.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); color: #8A928A">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4-4"></path></svg>
       <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search blocks</span>
-      <input type="search" placeholder="Search 61 blocks" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: #ECEFE9; font: 13px 'Geist',ui-sans-serif,system-ui,sans-serif">
+      <input type="search" placeholder="Search 61 blocks" style="flex: 1; width: 0; min-width: 0; border: 0; outline: 0; background: transparent; color: #ECEFE9; font: 13px 'Geist',ui-sans-serif,system-ui,sans-serif">
       <span class="mono" style="font-size: 11px; padding: 2px 6px; border-radius: 5px; background: rgba(255,255,255,0.06)">/</span>
     </label>
     <div class="mono" style="font-size: 10px; letter-spacing: 0.14em; color: #8A928A; padding: 0 6px">BLOCK LIBRARY</div>
@@ -120,8 +120,8 @@ a{color:#C6F432;text-decoration:none}a:hover{color:#DDFF6E}
 
   <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.07)">
     <div class="dots scroll-x" style="position: relative; flex: 1; min-height: 560px">
-      <div style="position: relative; width: 940px; height: 620px; margin: 0 auto">
-        <svg width="940" height="620" viewBox="0 0 940 620" aria-hidden="true" style="position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none">
+      <div style="position: relative; width: 904px; height: 620px; margin: 0 auto">
+        <svg width="904" height="620" viewBox="0 0 904 620" aria-hidden="true" style="position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none">
           <g fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="2">
             <path d="{{w.w1.d}}"></path><path d="{{w.w2.d}}"></path><path d="{{w.w3.d}}"></path><path d="{{w.w4.d}}"></path>
             <path d="{{w.w5.d}}"></path><path d="{{w.w6.d}}"></path><path d="{{w.w7.d}}"></path><path d="{{w.w8.d}}"></path>
@@ -155,8 +155,6 @@ a{color:#C6F432;text-decoration:none}a:hover{color:#DDFF6E}
             <sc-if value="{{n.isSwitch}}" hint-placeholder-val="{{false}}">
               <span aria-hidden="true" style="position: absolute; right: -6px; top: 22px; width: 10px; height: 10px; border-radius: 50%; background: #C6F432"></span>
               <span aria-hidden="true" style="position: absolute; right: -6px; top: 50px; width: 10px; height: 10px; border-radius: 50%; background: #F5B841"></span>
-              <span class="mono" aria-hidden="true" style="position: absolute; left: 204px; top: 12px; font-size: 10px; color: #C6F432">valid</span>
-              <span class="mono" aria-hidden="true" style="position: absolute; left: 204px; top: 58px; font-size: 10px; color: #F5B841">reject</span>
             </sc-if>
             <sc-if value="{{n.hasOut}}" hint-placeholder-val="{{true}}">
               <span aria-hidden="true" style="position: absolute; right: -6px; top: 34px; width: 10px; height: 10px; border-radius: 50%; background: {{n.portOut}}"></span>
@@ -203,7 +201,7 @@ a{color:#C6F432;text-decoration:none}a:hover{color:#DDFF6E}
     </sc-if>
   </main>
 
-  <aside aria-label="Node properties" style="flex: 1 1 300px; max-width: 100%; box-sizing: border-box; background: #0A0B0D; display: flex; flex-direction: column">
+  <aside aria-label="Node properties" style="flex: 1 1 284px; max-width: 100%; box-sizing: border-box; background: #0A0B0D; display: flex; flex-direction: column">
     <div style="padding: 18px 18px 14px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.07)">
       <span style="flex: none; width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: {{sel.chip}}; box-shadow: inset 0 0 0 1px {{sel.chipLine}}">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{sel.ink}}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{sel.icon}}"></path></svg>
@@ -249,7 +247,7 @@ a{color:#C6F432;text-decoration:none}a:hover{color:#DDFF6E}
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
-const NW = 196, NH = 80, STAGE_W = 940, STAGE_H = 620;
+const NW = 196, NH = 80, STAGE_W = 904, STAGE_H = 620;
 const LIME = '#C6F432', AMBER = '#F5B841', CORAL = '#FF7A66', MUTED = '#6F776F';
 const ICON = {
   trigger: 'M13 2 4 14h7l-1 8 9-12h-7z',
@@ -265,31 +263,31 @@ const ICON = {
   report: 'M5 3h10l4 4v14H5zM9 13h6M9 17h6'
 };
 const NODES = [
-  { id: 'n1', icon: 'trigger', kicker: 'TRIGGER · WMS', title: 'Pallet received', sub: 'wms.receiving.pallet', status: 'run', trigger: true, x: 20, y: 96,
+  { id: 'n1', icon: 'trigger', kicker: 'TRIGGER · WMS', title: 'Pallet received', sub: 'wms.receiving.pallet', status: 'run', trigger: true, x: 12, y: 96,
     fields: [['Source', 'WMS · Plant 01 · Dock 2'], ['Event', 'receiving.pallet.created'], ['Filter', 'warehouse = FG-1'], ['Concurrency', '8 parallel runs']],
     last: '12:41:06.882', payload: '{\n  "sscc": "046071230000184522",\n  "dock": "D2",\n  "items": 48\n}' },
-  { id: 'n2', icon: 'device', kicker: 'DEVICE · SCANNER', title: 'TSD-14 scan', sub: 'sscc + datamatrix', status: 'run', trigger: true, x: 20, y: 300,
+  { id: 'n2', icon: 'device', kicker: 'DEVICE · SCANNER', title: 'TSD-14 scan', sub: 'sscc + datamatrix', status: 'run', trigger: true, x: 12, y: 300,
     fields: [['Device', 'TSD-14 · Zebra MC3300'], ['Gateway', 'edge-gw-02 · Line 2'], ['Symbologies', 'GS1-128, DataMatrix'], ['Debounce', '300 ms']],
     last: '12:41:06.410', payload: '{\n  "device": "TSD-14",\n  "code": "0104607123…",\n  "rssi": -54\n}' },
-  { id: 'n3', icon: 'code', kicker: 'CODE ANALYZER', title: 'Verify DataMatrix', sub: 'gs1 · crypto-tail', status: 'run', x: 248, y: 198,
+  { id: 'n3', icon: 'code', kicker: 'CODE ANALYZER', title: 'Verify DataMatrix', sub: 'gs1 · crypto-tail', status: 'run', x: 242, y: 198,
     fields: [['Ruleset', 'GS1 DataMatrix · marking v3'], ['Checks', 'Structure, GTIN, crypto tail'], ['Timeout', '1 500 ms'], ['On failure', 'Route to reject output']],
     last: '12:41:06.951', payload: '{\n  "valid": true,\n  "gtin": "04607123000018",\n  "grade": "A"\n}' },
-  { id: 'n4', icon: 'logic', kicker: 'LOGIC · SWITCH', title: 'Code valid?', sub: '2 outputs · first match', status: 'run', isSwitch: true, x: 476, y: 198,
+  { id: 'n4', icon: 'logic', kicker: 'LOGIC · SWITCH', title: 'Code valid?', sub: 'valid · reject', status: 'run', isSwitch: true, x: 472, y: 198,
     fields: [['Property', 'msg.payload.valid'], ['Rule 1 · valid', '== true  →  output 1'], ['Rule 2 · reject', 'otherwise  →  output 2'], ['Mode', 'Stop after first match']],
     last: '12:41:06.955', payload: '{\n  "route": "valid",\n  "matched": 1\n}' },
-  { id: 'n5', icon: 'warehouse', kicker: 'WMS · PLACEMENT', title: 'Assign FIFO cell', sub: 'zone A · shelf-life ≥ 60%', status: 'run', x: 712, y: 24,
+  { id: 'n5', icon: 'warehouse', kicker: 'WMS · PLACEMENT', title: 'Assign FIFO cell', sub: 'zone A · shelf-life ≥ 60%', status: 'run', x: 702, y: 24,
     fields: [['Strategy', 'FEFO, then FIFO'], ['Zone', 'A · ambient racks'], ['Min shelf-life', '60 % remaining'], ['Fallback', 'Buffer zone B-00']],
     last: '12:41:07.031', payload: '{\n  "cell": "A-12-03",\n  "expires": "2027-04-02"\n}' },
-  { id: 'n6', icon: 'printer', kicker: 'PRINTER · ZT411', title: 'Print SSCC label', sub: 'offline · retrying 2/5', status: 'error', x: 712, y: 140,
+  { id: 'n6', icon: 'printer', kicker: 'PRINTER · ZT411', title: 'Print SSCC label', sub: 'offline · retrying 2/5', status: 'error', x: 702, y: 140,
     fields: [['Printer', 'ZT411 · Dock 2 · 192.168.12.40'], ['Template', 'SSCC pallet 100×150'], ['Retry policy', '5 × exponential, 2 s base'], ['On exhaust', 'Notify maintenance']],
     last: '12:41:07.044', payload: '{\n  "error": "ECONNREFUSED",\n  "attempt": 2,\n  "next": "4 s"\n}' },
-  { id: 'n7', icon: 'api', kicker: 'WEBHOOK · ERP', title: 'POST goods receipt', sub: 'erp/receipts · 201', status: 'run', x: 712, y: 256,
+  { id: 'n7', icon: 'api', kicker: 'WEBHOOK · ERP', title: 'POST goods receipt', sub: 'erp/receipts · 201', status: 'run', x: 702, y: 256,
     fields: [['Method', 'POST'], ['Endpoint', '{{ERP_URL}}/receipts'], ['Auth', 'Vault secret · erp-prod'], ['Idempotency', 'sscc + dock']],
     last: '12:41:07.180', payload: '{\n  "status": 201,\n  "doc": "GR-2026-104882"\n}' },
-  { id: 'n8', icon: 'plc', kicker: 'PLC · LINE 2', title: 'Divert to reject', sub: 'S7-1500 · DB12.DBX4.0', status: 'run', x: 712, y: 400,
+  { id: 'n8', icon: 'plc', kicker: 'PLC · LINE 2', title: 'Divert to reject', sub: 'S7-1500 · DB12.DBX4.0', status: 'run', x: 702, y: 400,
     fields: [['Controller', 'Siemens S7-1500 · Line 2'], ['Tag', 'DB12.DBX4.0 (bool)'], ['Write', 'true for 1 200 ms'], ['Interlock', 'Conveyor speed < 0.8 m/s']],
     last: '12:39:52.204', payload: '{\n  "tag": "DB12.DBX4.0",\n  "value": true\n}' },
-  { id: 'n9', icon: 'notify', kicker: 'TELEGRAM', title: 'Notify shift lead', sub: '#line-2-quality', status: 'run', x: 712, y: 516,
+  { id: 'n9', icon: 'notify', kicker: 'TELEGRAM', title: 'Notify shift lead', sub: '#line-2-quality', status: 'run', x: 702, y: 516,
     fields: [['Channel', 'Telegram · #line-2-quality'], ['Template', 'Reject · {{gtin}} · {{reason}}'], ['Throttle', '1 per 5 min per GTIN'], ['Escalate', 'After 3 rejects / 15 min']],
     last: '12:39:52.611', payload: '{\n  "sent": true,\n  "chat": "-100481…"\n}' }
 ];
@@ -340,7 +338,7 @@ class Component extends DCLogic {
   }
 
   moveTo(id, x, y) {
-    const cx = Math.round(Math.min(Math.max(x, 8), STAGE_W - NW - 40) / 4) * 4;
+    const cx = Math.round(Math.min(Math.max(x, 8), STAGE_W - NW - 4) / 4) * 4;
     const cy = Math.round(Math.min(Math.max(y, 8), STAGE_H - NH - 8) / 4) * 4;
     this.setState({ pos: Object.assign({}, this.state.pos, { [id]: { x: cx, y: cy } }) });
   }
