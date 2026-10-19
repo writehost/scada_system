@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SCADA Flow — Templates</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+body{margin:0;background:#060708}
+a{color:#C6F432;text-decoration:none}a:hover{color:#DDFF6E}
+.sf{font-family:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;color:#ECEFE9;-webkit-font-smoothing:antialiased}
+.mono{font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace}
+.serif{font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-weight:400}
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 30px 60px -30px rgba(0,0,0,.9)}
+.navlink{color:#A3ABA2;font-size:14px}.navlink:hover{color:#ECEFE9}
+.fchip{height:36px;padding:0 15px;border-radius:999px;border:0;font:500 13px 'Geist',ui-sans-serif,system-ui,sans-serif;cursor:pointer;transition:background .15s,color .15s}
+.tcard{display:flex;flex-direction:column;gap:14px;padding:18px;border-radius:20px;text-align:left;cursor:pointer;font-family:inherit;color:#ECEFE9;transition:transform .2s ease,border-color .2s,box-shadow .2s}
+.tcard:hover{transform:translateY(-2px)}
+.tcard:focus-visible{outline:2px solid #C6F432;outline-offset:3px}
+.cta{display:inline-flex;align-items:center;justify-content:center;gap:10px;height:46px;padding:0 20px;border-radius:999px;font-size:14px;font-weight:500}
+@keyframes flow{to{stroke-dashoffset:-16}}
+.flowline{stroke-dasharray:3 5;animation:flow 1.2s linear infinite}
+@media (max-width:900px){.hide-sm{display:none !important}}
+@media (prefers-reduced-motion:reduce){.flowline{animation:none}.tcard:hover{transform:none}}
+</style>
+</helmet>
+<div class="sf" style="min-height: 1180px; background: radial-gradient(900px 480px at 80% 20%, rgba(198,244,50,0.07), transparent 65%), #060708">
+
+<header style="max-width: 1320px; margin: 0 auto; padding: 22px 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap">
+  <div style="display: flex; align-items: center; gap: 28px">
+    <a href="Main.dc.html" style="display: flex; align-items: center; gap: 12px; color: #ECEFE9" aria-label="SCADA Flow home">
+      <span style="width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, #1B1F14, #0B0D08); box-shadow: inset 0 0 0 1px rgba(198,244,50,0.35), 0 0 24px -4px rgba(198,244,50,0.45)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C6F432" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="6" r="2.2"></circle><circle cx="5" cy="18" r="2.2"></circle><circle cx="19" cy="12" r="2.6"></circle><path d="M7.2 6.4c5 0 4.6 5.6 9.2 5.6M7.2 17.6c5 0 4.6-5.6 9.2-5.6"></path></svg>
+      </span>
+      <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">SCADA Flow</span>
+    </a>
+    <nav class="hide-sm" style="display: flex; gap: 26px" aria-label="Primary">
+      <a class="navlink" href="Main.dc.html">Overview</a>
+      <a class="navlink" href="Builder.dc.html">Builder</a>
+      <a class="navlink" href="Integrations.dc.html">Integrations</a>
+      <a class="navlink" href="#" style="color: #ECEFE9">Templates</a>
+      <a class="navlink" href="Monitoring.dc.html">Runtime</a>
+      <a class="navlink" href="Tenancy.dc.html">Cloud</a>
+    </nav>
+  </div>
+  <label class="glass" style="display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px; border-radius: 999px; color: #8A928A; min-width: 260px">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4-4"></path></svg>
+    <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search templates</span>
+    <input type="search" placeholder="Search templates" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: #ECEFE9; font: 13px 'Geist',ui-sans-serif,system-ui,sans-serif">
+  </label>
+</header>
+
+<section style="max-width: 1240px; margin: 0 auto; padding: 40px 24px 0; display: flex; flex-direction: column; gap: 26px">
+  <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 24px">
+    <div style="max-width: 680px; display: flex; flex-direction: column; gap: 16px">
+      <span class="mono" style="font-size: 11px; letter-spacing: 0.16em; color: #C6F432">04 · TEMPLATES</span>
+      <h1 style="margin: 0; font-size: clamp(2.2rem, 4.2vw, 3.6rem); line-height: 1.04; letter-spacing: -0.03em; font-weight: 500">Start from a flow that already <span class="serif" style="color: #C6F432">runs a plant.</span></h1>
+      <p style="margin: 0; font-size: 17px; line-height: 1.6; color: #A3ABA2">Industrial templates wired to your WMS, YMS, QPass and APS. Pick one, map your devices, deploy to staging.</p>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px" role="group" aria-label="Filter templates by area">
+      <sc-for list="{{filters}}" as="f" hint-placeholder-count="5">
+        <button class="fchip" type="button" aria-pressed="{{f.on}}" onClick="{{f.pick}}" style="{{f.style}}">{{f.label}}</button>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; padding-bottom: 72px">
+    <div style="flex: 999 1 600px; min-width: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(268px, 100%), 1fr)); gap: 14px">
+      <sc-for list="{{cards}}" as="t" hint-placeholder-count="8">
+        <button class="tcard" type="button" aria-pressed="{{t.on}}" onClick="{{t.pick}}" style="background: {{t.bg}}; border: 1px solid {{t.border}}; box-shadow: {{t.shadow}}">
+          <span style="display: flex; align-items: center; justify-content: space-between; width: 100%">
+            <span class="mono" style="font-size: 10.5px; letter-spacing: 0.12em; color: {{t.areaInk}}">{{t.area}}</span>
+            <span class="mono" style="font-size: 10.5px; color: #8A928A">{{t.count}} nodes</span>
+          </span>
+          <span style="display: flex; align-items: center; height: 34px; padding: 0 2px; width: 100%">
+            <sc-for list="{{t.dots}}" as="d" hint-placeholder-count="5">
+              <span style="display: flex; align-items: center; flex: {{d.flex}}">
+                <span style="flex: none; width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: {{d.bg}}; box-shadow: inset 0 0 0 1px {{d.line}}">
+                  <span style="width: 6px; height: 6px; border-radius: 2px; background: {{d.ink}}"></span>
+                </span>
+                <sc-if value="{{d.link}}" hint-placeholder-val="{{true}}">
+                  <span style="flex: 1; height: 1px; margin: 0 4px; background: linear-gradient(90deg, rgba(198,244,50,0.5), rgba(255,255,255,0.12))"></span>
+                </sc-if>
+              </span>
+            </sc-for>
+          </span>
+          <span style="display: flex; flex-direction: column; gap: 6px">
+            <span style="font-size: 16px; font-weight: 500; letter-spacing: -0.01em">{{t.name}}</span>
+            <span style="font-size: 13px; line-height: 1.5; color: #A3ABA2">{{t.desc}}</span>
+          </span>
+          <span style="display: flex; flex-wrap: wrap; gap: 6px">
+            <sc-for list="{{t.mods}}" as="m" hint-placeholder-count="3">
+              <span class="mono" style="font-size: 10.5px; padding: 4px 8px; border-radius: 6px; background: rgba(255,255,255,0.05); color: #C9D0C7">{{m}}</span>
+            </sc-for>
+          </span>
+        </button>
+      </sc-for>
+    </div>
+
+    <aside aria-label="Template preview" class="glass" style="flex: 1 1 340px; min-width: 0; box-sizing: border-box; border-radius: 24px; padding: 24px; display: flex; flex-direction: column; gap: 20px; border-color: rgba(198,244,50,0.22)">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span class="mono" style="font-size: 10.5px; letter-spacing: 0.14em; color: #C6F432">{{sel.area}} · OFFICIAL TEMPLATE</span>
+        <span style="font-size: 24px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.15">{{sel.name}}</span>
+        <span style="font-size: 14px; line-height: 1.55; color: #A3ABA2">{{sel.long}}</span>
+      </div>
+      <div style="position: relative; display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 16px; background: #08090A; border: 1px solid rgba(255,255,255,0.06)">
+        <svg aria-hidden="true" width="2" height="100" viewBox="0 0 2 100" preserveAspectRatio="none" style="position: absolute; left: 33px; top: 34px; width: 2px; height: calc(100% - 68px)"><path class="flowline" d="M1 0 L1 100" stroke="#C6F432" stroke-width="2" vector-effect="non-scaling-stroke" fill="none"></path></svg>
+        <sc-for list="{{sel.steps}}" as="s" hint-placeholder-count="5">
+          <div style="position: relative; display: flex; align-items: center; gap: 12px">
+            <span class="mono" style="flex: none; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 11px; background: {{s.bg}}; color: {{s.ink}}; box-shadow: inset 0 0 0 1px {{s.line}}">{{s.n}}</span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+              <span style="font-size: 13.5px; color: #ECEFE9">{{s.title}}</span>
+              <span class="mono" style="font-size: 10.5px; color: #8A928A">{{s.mod}}</span>
+            </span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+        <div style="padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,0.03); display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 11.5px; color: #8A928A">Needs</span>
+          <span style="font-size: 13px">{{sel.needs}}</span>
+        </div>
+        <div style="padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,0.03); display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 11.5px; color: #8A928A">Deploys to</span>
+          <span style="font-size: 13px">Staging first</span>
+        </div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px">
+        <a class="cta" href="Builder.dc.html" style="flex: 1; background: #C6F432; color: #0A0C05; box-shadow: 0 10px 34px -10px rgba(198,244,50,0.6)">Use template</a>
+        <a class="cta" href="Builder.dc.html" style="color: #ECEFE9; background: rgba(255,255,255,0.05); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12)">Open in builder</a>
+      </div>
+    </aside>
+  </div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1180}}'>
+const T = [
+  { id: 'receiving', area: 'Warehouse', name: 'Pallet receiving automation', desc: 'Scan, verify, place and post a pallet without touching a keyboard.',
+    long: 'Every inbound pallet is scanned at the dock, its codes verified, a FEFO cell assigned, the SSCC label printed and the goods receipt posted to ERP.',
+    mods: ['WMS', 'TSD', 'Printer', 'ERP'], needs: 'WMS, 1 printer',
+    steps: [['Pallet received', 'wms.receiving'], ['Verify DataMatrix', 'code.verify'], ['Assign FEFO cell', 'wms.place'], ['Print SSCC label', 'dev.printer'], ['Post goods receipt', 'erp.doc']] },
+  { id: 'fifo', area: 'Warehouse', name: 'Expiration · FIFO control', desc: 'Find stock nearing expiry every morning and move it to the front.',
+    long: 'A 06:00 schedule queries stock under 30 % shelf-life, blocks it from out-of-order picking, creates move-to-front tasks and tells the shift lead.',
+    mods: ['WMS', 'Schedule', 'Telegram'], needs: 'WMS',
+    steps: [['Every day · 06:00', 'core.cron'], ['Shelf-life < 30 %', 'wms.expiry'], ['Split by zone', 'core.switch'], ['Create move tasks', 'wms.move'], ['Notify shift lead', 'notify.tg']] },
+  { id: 'line', area: 'Production', name: 'Production line event handling', desc: 'Turn raw PLC tag changes into clean line states in APS.',
+    long: 'Tag changes from the line PLC are debounced, classified into run, stop, changeover or fault, written to the APS line state and mirrored on the andon light.',
+    mods: ['PLC', 'APS', 'Andon'], needs: 'Edge gateway, APS',
+    steps: [['PLC tag change', 'plc.tag'], ['Debounce 2 s', 'core.delay'], ['Classify event', 'core.switch'], ['Update line state', 'aps.line'], ['Set andon colour', 'dev.andon']] },
+  { id: 'codes', area: 'Quality', name: 'Code verification · reject logic', desc: 'Grade every DataMatrix on the line and divert failures.',
+    long: 'A vision camera reads each code, Code Analyzer grades it, and anything below grade C or with a bad crypto tail is diverted by the PLC and logged for the shift report.',
+    mods: ['Camera', 'Code Analyzer', 'PLC'], needs: 'Camera, PLC output',
+    steps: [['Camera frame', 'dev.camera'], ['Grade DataMatrix', 'code.verify'], ['Grade ≥ C?', 'core.switch'], ['Divert to reject', 'plc.write'], ['Log to shift report', 'rpt.shift']] },
+  { id: 'moves', area: 'Logistics', name: 'Warehouse movement orchestration', desc: 'Split released orders into zone tasks and hand them to terminals.',
+    long: 'When an order is released, lines are split by zone, move tasks are created in WMS, assigned to the nearest free TSD and closed when the destination cell is scanned.',
+    mods: ['WMS', 'TSD', 'YMS'], needs: 'WMS, TSD fleet',
+    steps: [['Order released', 'wms.order'], ['Split by zone', 'core.switch'], ['Create move tasks', 'wms.move'], ['Assign nearest TSD', 'dev.scanner'], ['Confirm on scan', 'wms.confirm']] },
+  { id: 'ship', area: 'Logistics', name: 'Shipment event notifications', desc: 'Keep customers and the gate in sync from arrival to departure.',
+    long: 'Gate arrival in YMS triggers QPass clearance; when loading completes the shipment is posted to ERP and the consignee gets an email with the SSCC list.',
+    mods: ['YMS', 'QPass', 'ERP', 'Email'], needs: 'YMS, QPass',
+    steps: [['Truck at gate', 'yms.gate'], ['Driver cleared', 'qpass.pass'], ['Loading complete', 'wms.ship'], ['Post shipment', 'erp.doc'], ['Email consignee', 'notify.mail']] },
+  { id: 'printcam', area: 'Devices', name: 'Printer + camera workflow', desc: 'Print a label, verify it optically, reprint on failure.',
+    long: 'Each printed label is checked by a camera at the printer exit. A poor grade triggers one reprint; a second failure stops the printer and raises a maintenance ticket.',
+    mods: ['Printer', 'Camera', 'Code Analyzer'], needs: 'Printer, camera',
+    steps: [['Print label', 'dev.printer'], ['Camera verifies', 'dev.camera'], ['Grade ≥ C?', 'core.switch'], ['Reprint once', 'dev.printer'], ['Release pallet', 'wms.release']] },
+  { id: 'oee', area: 'Production', name: 'OEE · downtime alerts', desc: 'Escalate line stops before they become lost shifts.',
+    long: 'A stop longer than 3 minutes fetches the reason code, recomputes the OEE window in APS, alerts the shift lead in Telegram and escalates to the plant manager after 15 minutes.',
+    mods: ['PLC', 'APS', 'Telegram'], needs: 'Edge gateway, APS',
+    steps: [['Line stop > 3 min', 'plc.tag'], ['Fetch reason code', 'aps.line'], ['Recompute OEE', 'aps.oee'], ['Alert shift lead', 'notify.tg'], ['Escalate at 15 min', 'core.delay']] }
+];
+const AREAS = ['All', 'Warehouse', 'Production', 'Quality', 'Logistics', 'Devices'];
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { area: 'All', sel: 'receiving' };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const list = T.filter((t) => s.area === 'All' || t.area === s.area);
+    const cards = list.map((t) => {
+      const on = s.sel === t.id;
+      return {
+        name: t.name, desc: t.desc, mods: t.mods, area: t.area.toUpperCase(), count: t.steps.length, on,
+        areaInk: on ? '#C6F432' : '#8A928A',
+        bg: on ? 'linear-gradient(180deg, rgba(198,244,50,0.08), rgba(198,244,50,0.02))' : 'linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015))',
+        border: on ? 'rgba(198,244,50,0.55)' : 'rgba(255,255,255,0.08)',
+        shadow: on ? '0 0 0 4px rgba(198,244,50,0.08), 0 24px 50px -24px rgba(198,244,50,0.4)' : '0 24px 50px -30px rgba(0,0,0,0.9)',
+        dots: t.steps.map((st, i) => ({
+          link: i < t.steps.length - 1,
+          flex: i < t.steps.length - 1 ? '1' : 'none',
+          bg: i === 0 ? 'rgba(198,244,50,0.12)' : 'rgba(255,255,255,0.04)',
+          line: i === 0 ? 'rgba(198,244,50,0.4)' : 'rgba(255,255,255,0.12)',
+          ink: i === 0 ? '#C6F432' : '#8A928A'
+        })),
+        pick: () => this.setState({ sel: t.id })
+      };
+    });
+    const cur = T.find((t) => t.id === s.sel) || T[0];
+    const sel = {
+      name: cur.name, long: cur.long, area: cur.area.toUpperCase(), needs: cur.needs,
+      steps: cur.steps.map(([title, mod], i) => ({
+        n: String(i + 1).padStart(2, '0'), title, mod,
+        bg: i === 0 ? '#C6F432' : '#101214',
+        ink: i === 0 ? '#0A0C05' : '#C9D0C7',
+        line: i === 0 ? 'rgba(198,244,50,0.6)' : 'rgba(255,255,255,0.12)'
+      }))
+    };
+    const filters = AREAS.map((a) => ({
+      label: a, on: s.area === a,
+      style: s.area === a ? 'background: #ECEFE9; color: #0A0C05' : 'background: rgba(255,255,255,0.05); color: #C9D0C7; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10)',
+      pick: () => this.setState({ area: a })
+    }));
+    return { cards, sel, filters };
+  }
+}
+</script>
+</body>
+</html>

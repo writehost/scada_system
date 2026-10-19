@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SCADA Flow mobile — Control center</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#060708}
+a{color:#C6F432;text-decoration:none}
+.sf{font-family:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;color:#ECEFE9;-webkit-font-smoothing:antialiased}
+.mono{font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace}
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:52px;font-size:10.5px;color:#8A928A}
+.qa{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:14px;border-radius:18px;text-align:left;cursor:pointer;font-family:inherit;color:#ECEFE9;min-height:104px;box-sizing:border-box}
+</style>
+</helmet>
+<div class="sf" style="position: relative; width: 390px; height: 844px; overflow: hidden; background: radial-gradient(420px 300px at 50% 0%, rgba(198,244,50,0.08), transparent 70%), #060708; display: flex; flex-direction: column">
+  <div style="flex: 1; overflow: hidden; padding: 56px 18px 0; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: flex-end; justify-content: space-between">
+      <span style="display: flex; flex-direction: column; gap: 4px">
+        <span class="mono" style="font-size: 10.5px; letter-spacing: 0.12em; color: #8A928A">PLANT 01 · PRODUCTION</span>
+        <span style="font-size: 26px; font-weight: 500; letter-spacing: -0.02em">Control center</span>
+      </span>
+      <span class="mono" style="font-size: 11px; padding: 5px 10px; border-radius: 999px; background: rgba(198,244,50,0.12); color: #C6F432">{{liveCount}} live</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+      <button class="qa glass" type="button" style="border-color: rgba(198,244,50,0.3)">
+        <span style="width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: #C6F432">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0A0C05" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.3 4.4 4.4 0 0 0 7 18z"></path><path d="M12 11v5M9.5 13.5 12 11l2.5 2.5"></path></svg>
+        </span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 500">Approve v15</span><span class="mono" style="font-size: 10.5px; color: #8A928A">staging → production</span></span>
+      </button>
+      <button class="qa glass" type="button">
+        <span style="width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(245,184,65,0.12)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F5B841" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"></path></svg>
+        </span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 500">Replay queue</span><span class="mono" style="font-size: 10.5px; color: #8A928A">12 dead letters</span></span>
+      </button>
+      <button class="qa glass" type="button">
+        <span style="width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.06)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#DCE2D9" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z"></path></svg>
+        </span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 500">Test printer</span><span class="mono" style="font-size: 10.5px; color: #8A928A">ZT411 · dock D2</span></span>
+      </button>
+      <button class="qa glass" type="button" style="border-color: rgba(255,122,102,0.3)">
+        <span style="width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,122,102,0.12)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF9C8C" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"></rect><rect x="14" y="5" width="4" height="14" rx="1"></rect></svg>
+        </span>
+        <span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 14px; font-weight: 500">Pause site</span><span class="mono" style="font-size: 10.5px; color: #8A928A">hold to confirm</span></span>
+      </button>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 2px 0">
+      <span style="font-size: 14px; font-weight: 500">Flows on this site</span>
+      <span class="mono" style="font-size: 10.5px; color: #8A928A">tap to pause</span>
+    </div>
+    <div class="glass" style="border-radius: 20px; padding: 4px 14px">
+      <sc-for list="{{flows}}" as="f" hint-placeholder-count="5">
+        <div style="display: flex; align-items: center; gap: 12px; min-height: 60px; border-bottom: 1px solid {{f.sep}}">
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+            <span style="font-size: 14px">{{f.name}}</span>
+            <span class="mono" style="font-size: 10.5px; color: {{f.metaInk}}">{{f.meta}}</span>
+          </span>
+          <button type="button" onClick="{{f.toggle}}" aria-pressed="{{f.on}}" aria-label="{{f.aria}}" style="flex: none; width: 52px; height: 32px; border-radius: 999px; border: 0; padding: 4px; cursor: pointer; display: flex; justify-content: {{f.align}}; background: {{f.track}}">
+            <span style="width: 24px; height: 24px; border-radius: 50%; background: {{f.knob}}"></span>
+          </button>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <nav aria-label="Mobile tabs" style="display: flex; padding: 6px 10px 26px; background: rgba(8,9,10,0.92); border-top: 1px solid rgba(255,255,255,0.07); backdrop-filter: blur(20px)">
+    <a class="tab" href="MobileMonitor.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-7 4 14 3-7h4"></path></svg>Runtime</a>
+    <a class="tab" href="MobileAlerts.dc.html"><span style="position: relative; display: flex"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 21h4"></path></svg><span style="position: absolute; right: -3px; top: -2px; width: 8px; height: 8px; border-radius: 50%; background: #FF7A66; box-shadow: 0 0 0 2px #08090A"></span></span>Alerts</a>
+    <a class="tab" href="#"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="6" r="2.2"></circle><circle cx="5" cy="18" r="2.2"></circle><circle cx="19" cy="12" r="2.6"></circle><path d="M7.2 6.4c5 0 4.6 5.6 9.2 5.6M7.2 17.6c5 0 4.6-5.6 9.2-5.6"></path></svg>Flows</a>
+    <a class="tab" href="MobileControl.dc.html" aria-current="page" style="color: #C6F432"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path><circle cx="16" cy="7" r="2"></circle><circle cx="8" cy="17" r="2"></circle></svg>Control</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const FLOWS = [
+  { id: 'f1', name: 'receiving.line-2', meta: '1 284 events/min · v14', on: true },
+  { id: 'f2', name: 'codes.reject-line-2', meta: 'grade A 98.6% · v9', on: true },
+  { id: 'f3', name: 'yard.gate-sync', meta: 'gateway degraded · v21', on: true, warn: true },
+  { id: 'f4', name: 'fifo.morning-sweep', meta: 'next run 06:00 · v6', on: true },
+  { id: 'f5', name: 'oee.downtime', meta: 'paused · maintenance', on: false }
+];
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const on = {};
+    FLOWS.forEach((f) => { on[f.id] = f.on; });
+    this.state = { on };
+  }
+
+  renderVals() {
+    const st = this.state.on;
+    const flows = FLOWS.map((f, i) => {
+      const on = st[f.id];
+      return {
+        name: f.name, on,
+        meta: on ? (f.id === 'f5' ? 'running · resumed by you' : f.meta) : 'paused',
+        metaInk: !on ? '#8A928A' : f.warn ? '#F5B841' : '#8A928A',
+        aria: (on ? 'Pause ' : 'Resume ') + f.name,
+        align: on ? 'flex-end' : 'flex-start',
+        track: on ? '#C6F432' : 'rgba(255,255,255,0.12)',
+        knob: on ? '#0A0C05' : '#C9D0C7',
+        sep: i < FLOWS.length - 1 ? 'rgba(255,255,255,0.06)' : 'transparent',
+        toggle: () => this.setState({ on: Object.assign({}, st, { [f.id]: !on }) })
+      };
+    });
+    return { flows, liveCount: flows.filter((f) => f.on).length };
+  }
+}
+</script>
+</body>
+</html>

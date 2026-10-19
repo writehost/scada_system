@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SCADA Flow — Workflow Builder</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#060708}
+a{color:#C6F432;text-decoration:none}a:hover{color:#DDFF6E}
+.sf{font-family:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;color:#ECEFE9;-webkit-font-smoothing:antialiased}
+.mono{font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace}
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 20px 50px -24px rgba(0,0,0,.9)}
+.dots{background-color:#08090A;background-image:radial-gradient(rgba(255,255,255,.075) 1px,transparent 1.2px);background-size:22px 22px}
+.tb{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 13px;border-radius:10px;border:0;font:500 13px 'Geist',ui-sans-serif,system-ui,sans-serif;color:#C9D0C7;background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,.09);cursor:pointer;transition:background .15s,color .15s}
+.tb:hover{background:rgba(255,255,255,.08);color:#fff}
+.tb-lime{background:#C6F432;color:#0A0C05;box-shadow:0 0 0 1px rgba(198,244,50,.5),0 8px 28px -8px rgba(198,244,50,.6)}
+.tb-lime:hover{background:#D4FF4A;color:#0A0C05}
+.seg{height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#A3ABA2;font:500 12px 'Geist',ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+.seg:hover{color:#ECEFE9}
+.cat{width:100%;display:flex;align-items:center;gap:10px;height:38px;padding:0 10px;border:0;border-radius:10px;background:transparent;color:#C9D0C7;font:500 13px 'Geist',ui-sans-serif,system-ui,sans-serif;cursor:pointer;text-align:left}
+.cat:hover{background:rgba(255,255,255,.04);color:#fff}
+.node{transition:box-shadow .2s,border-color .2s}
+.node:focus-visible{outline:2px solid #C6F432;outline-offset:3px}
+.wire-flow{stroke-dasharray:4 8;animation:flow 1.1s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-24}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(198,244,50,.55)}60%{box-shadow:0 0 0 6px rgba(198,244,50,0)}}
+.pulse{animation:pulse 2.4s ease-out infinite}
+.scroll-x{overflow:auto;scrollbar-width:thin;scrollbar-color:#2A2E32 transparent}
+@media (prefers-reduced-motion:reduce){.wire-flow,.pulse{animation:none}}
+</style>
+</helmet>
+<div class="sf" style="min-height: 960px; display: flex; flex-direction: column; background: #060708">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 20px; padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,0.07); background: linear-gradient(180deg, #0C0E10, #08090A)">
+  <div style="display: flex; align-items: center; gap: 14px; min-width: 0">
+    <a href="Main.dc.html" aria-label="SCADA Flow overview" style="flex: none; width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, #1B1F14, #0B0D08); box-shadow: inset 0 0 0 1px rgba(198,244,50,0.35), 0 0 20px -6px rgba(198,244,50,0.5)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C6F432" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="6" r="2.2"></circle><circle cx="5" cy="18" r="2.2"></circle><circle cx="19" cy="12" r="2.6"></circle><path d="M7.2 6.4c5 0 4.6 5.6 9.2 5.6M7.2 17.6c5 0 4.6-5.6 9.2-5.6"></path></svg>
+    </a>
+    <nav aria-label="Breadcrumb" style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #8A928A; min-width: 0; flex-wrap: wrap">
+      <span>Plant 01</span><span aria-hidden="true">/</span><span>Receiving</span><span aria-hidden="true">/</span>
+      <span style="color: #ECEFE9; font-weight: 500">receiving.line-2</span>
+      <span class="mono" style="font-size: 11px; padding: 3px 8px; border-radius: 6px; background: rgba(255,255,255,0.05); color: #A3ABA2">draft v15 · autosaved</span>
+    </nav>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+    <div role="group" aria-label="Environment" style="display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(255,255,255,0.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08)">
+      <sc-for list="{{envs}}" as="e" hint-placeholder-count="3">
+        <button class="seg" type="button" aria-pressed="{{e.on}}" onClick="{{e.pick}}" style="{{e.style}}">{{e.label}}</button>
+      </sc-for>
+    </div>
+    <button class="tb" type="button" onClick="{{toggleRun}}" aria-pressed="{{running}}" style="min-width: 118px">
+      <span class="{{runDotClass}}" style="width: 8px; height: 8px; border-radius: 50%; background: {{runColor}}"></span>
+      {{runLabel}}
+    </button>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+    <button class="tb" type="button" onClick="{{toggleDrawer}}" aria-pressed="{{drawer}}">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v3M16 3v3M5 9h14v4a7 7 0 0 1-14 0zM12 13v8M3 13h2M19 13h2"></path></svg>
+      Debug
+    </button>
+    <button class="tb" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 5l12 7-12 7z"></path></svg>
+      Test run
+    </button>
+    <button class="tb" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5M5 21h14"></path></svg>
+      Publish
+    </button>
+    <button class="tb tb-lime" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.3 4.4 4.4 0 0 0 7 18z"></path><path d="M12 11v5M9.5 13.5 12 11l2.5 2.5"></path></svg>
+      Deploy to {{envLabel}}
+    </button>
+  </div>
+</header>
+
+<div style="flex: 1; display: flex; flex-wrap: wrap; align-items: stretch; min-height: 0">
+
+  <aside aria-label="Block library" style="flex: 1 1 236px; max-width: 100%; box-sizing: border-box; padding: 16px 12px; border-right: 1px solid rgba(255,255,255,0.07); background: #0A0B0D; display: flex; flex-direction: column; gap: 14px">
+    <label style="display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: 10px; background: rgba(255,255,255,0.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); color: #8A928A">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m20 20-4-4"></path></svg>
+      <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Search blocks</span>
+      <input type="search" placeholder="Search 61 blocks" style="flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: #ECEFE9; font: 13px 'Geist',ui-sans-serif,system-ui,sans-serif">
+      <span class="mono" style="font-size: 11px; padding: 2px 6px; border-radius: 5px; background: rgba(255,255,255,0.06)">/</span>
+    </label>
+    <div class="mono" style="font-size: 10px; letter-spacing: 0.14em; color: #8A928A; padding: 0 6px">BLOCK LIBRARY</div>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <sc-for list="{{cats}}" as="c" hint-placeholder-count="8">
+        <div style="display: flex; flex-direction: column">
+          <button class="cat" type="button" onClick="{{c.pick}}" aria-expanded="{{c.active}}" style="{{c.style}}">
+            <span style="flex: none; width: 26px; height: 26px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: {{c.chip}}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{c.ink}}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{c.icon}}"></path></svg>
+            </span>
+            <span style="flex: 1">{{c.label}}</span>
+            <span class="mono" style="font-size: 11px; color: #8A928A">{{c.count}}</span>
+          </button>
+          <sc-if value="{{c.active}}" hint-placeholder-val="{{false}}">
+            <div style="display: flex; flex-direction: column; gap: 6px; padding: 6px 4px 10px 12px">
+              <sc-for list="{{c.blocks}}" as="b" hint-placeholder-count="4">
+                <div style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; background: linear-gradient(180deg, #15181B, #101214); border: 1px solid rgba(255,255,255,0.07); cursor: grab">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#6F776F" aria-hidden="true"><circle cx="8" cy="6" r="1.6"></circle><circle cx="16" cy="6" r="1.6"></circle><circle cx="8" cy="12" r="1.6"></circle><circle cx="16" cy="12" r="1.6"></circle><circle cx="8" cy="18" r="1.6"></circle><circle cx="16" cy="18" r="1.6"></circle></svg>
+                  <span style="flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0">
+                    <span style="font-size: 13px; color: #ECEFE9">{{b.name}}</span>
+                    <span class="mono" style="font-size: 10.5px; color: #8A928A">{{b.id}}</span>
+                  </span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+  </aside>
+
+  <main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.07)">
+    <div class="dots scroll-x" style="position: relative; flex: 1; min-height: 560px">
+      <div style="position: relative; width: 940px; height: 620px; margin: 0 auto">
+        <svg width="940" height="620" viewBox="0 0 940 620" aria-hidden="true" style="position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none">
+          <g fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="2">
+            <path d="{{w.w1.d}}"></path><path d="{{w.w2.d}}"></path><path d="{{w.w3.d}}"></path><path d="{{w.w4.d}}"></path>
+            <path d="{{w.w5.d}}"></path><path d="{{w.w6.d}}"></path><path d="{{w.w7.d}}"></path><path d="{{w.w8.d}}"></path>
+          </g>
+          <g fill="none" stroke-width="1.8" stroke-linecap="round" style="filter: drop-shadow(0 0 3px rgba(198,244,50,0.35))">
+            <path class="{{w.w1.cls}}" stroke="{{w.w1.stroke}}" d="{{w.w1.d}}"></path>
+            <path class="{{w.w2.cls}}" stroke="{{w.w2.stroke}}" d="{{w.w2.d}}"></path>
+            <path class="{{w.w3.cls}}" stroke="{{w.w3.stroke}}" d="{{w.w3.d}}"></path>
+            <path class="{{w.w4.cls}}" stroke="{{w.w4.stroke}}" d="{{w.w4.d}}"></path>
+            <path class="{{w.w5.cls}}" stroke="{{w.w5.stroke}}" d="{{w.w5.d}}"></path>
+            <path class="{{w.w6.cls}}" stroke="{{w.w6.stroke}}" d="{{w.w6.d}}"></path>
+            <path class="{{w.w7.cls}}" stroke="{{w.w7.stroke}}" d="{{w.w7.d}}"></path>
+            <path class="{{w.w8.cls}}" stroke="{{w.w8.stroke}}" d="{{w.w8.d}}"></path>
+          </g>
+        </svg>
+
+        <sc-for list="{{nodes}}" as="n" hint-placeholder-count="9">
+          <button class="node" type="button" aria-label="{{n.aria}}" aria-pressed="{{n.selected}}" onPointerDown="{{n.down}}" onPointerMove="{{n.move}}" onPointerUp="{{n.up}}" onPointerCancel="{{n.up}}" onKeyDown="{{n.key}}" style="position: absolute; left: {{n.x}}px; top: {{n.y}}px; width: 196px; height: 80px; box-sizing: border-box; margin: 0; padding: 12px; display: flex; align-items: center; gap: 12px; text-align: left; border-radius: 14px; background: linear-gradient(180deg, #181B1E, #0E1012); border: 1px solid {{n.border}}; box-shadow: {{n.shadow}}; color: #ECEFE9; font-family: inherit; cursor: {{n.cursor}}; touch-action: none; user-select: none; -webkit-user-select: none">
+            <span style="flex: none; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: {{n.chip}}; box-shadow: inset 0 0 0 1px {{n.chipLine}}">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{n.ink}}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{n.icon}}"></path></svg>
+            </span>
+            <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+              <span style="display: flex; align-items: center; gap: 6px">
+                <span class="mono" style="flex: 1; font-size: 9.5px; letter-spacing: 0.1em; color: #8A928A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{n.kicker}}</span>
+                <span style="flex: none; width: 7px; height: 7px; border-radius: 50%; background: {{n.dot}}; box-shadow: 0 0 8px {{n.dot}}"></span>
+              </span>
+              <span style="font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{n.title}}</span>
+              <span class="mono" style="font-size: 10.5px; color: {{n.subInk}}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{n.sub}}</span>
+            </span>
+            <span aria-hidden="true" style="position: absolute; left: -6px; top: 34px; width: 10px; height: 10px; border-radius: 50%; background: #08090A; box-shadow: inset 0 0 0 2px {{n.portIn}}"></span>
+            <sc-if value="{{n.isSwitch}}" hint-placeholder-val="{{false}}">
+              <span aria-hidden="true" style="position: absolute; right: -6px; top: 22px; width: 10px; height: 10px; border-radius: 50%; background: #C6F432"></span>
+              <span aria-hidden="true" style="position: absolute; right: -6px; top: 50px; width: 10px; height: 10px; border-radius: 50%; background: #F5B841"></span>
+              <span class="mono" aria-hidden="true" style="position: absolute; left: 204px; top: 12px; font-size: 10px; color: #C6F432">valid</span>
+              <span class="mono" aria-hidden="true" style="position: absolute; left: 204px; top: 58px; font-size: 10px; color: #F5B841">reject</span>
+            </sc-if>
+            <sc-if value="{{n.hasOut}}" hint-placeholder-val="{{true}}">
+              <span aria-hidden="true" style="position: absolute; right: -6px; top: 34px; width: 10px; height: 10px; border-radius: 50%; background: {{n.portOut}}"></span>
+            </sc-if>
+          </button>
+        </sc-for>
+      </div>
+
+      <div class="glass" style="position: absolute; left: 16px; top: 16px; display: flex; align-items: center; gap: 14px; padding: 8px 14px; border-radius: 12px; font-size: 12px; color: #A3ABA2">
+        <span style="display: flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #C6F432"></span>Running</span>
+        <span style="display: flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #6F776F"></span>Paused</span>
+        <span style="display: flex; align-items: center; gap: 6px"><span style="width: 7px; height: 7px; border-radius: 50%; background: #FF7A66"></span>Error</span>
+        <span class="mono" style="color: #8A928A">· drag nodes to arrange</span>
+      </div>
+      <div class="glass" style="position: absolute; right: 16px; bottom: 16px; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 12px">
+        <button class="seg" type="button" aria-label="Zoom out">−</button>
+        <span class="mono" style="font-size: 12px; color: #C9D0C7; padding: 0 6px">100%</span>
+        <button class="seg" type="button" aria-label="Zoom in">+</button>
+        <span style="width: 1px; height: 18px; background: rgba(255,255,255,0.1)"></span>
+        <button class="seg" type="button">Fit</button>
+      </div>
+    </div>
+
+    <sc-if value="{{drawer}}" hint-placeholder-val="{{true}}">
+      <section aria-label="Debug console" style="border-top: 1px solid rgba(255,255,255,0.08); background: #08090A">
+        <div style="display: flex; align-items: center; gap: 18px; padding: 0 16px; height: 42px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12.5px">
+          <span style="color: #ECEFE9; font-weight: 500; box-shadow: inset 0 -2px 0 #C6F432; height: 42px; display: flex; align-items: center">Debug</span>
+          <span style="color: #8A928A">Runs</span>
+          <span style="color: #8A928A">Problems <span class="mono" style="color: #FF7A66">1</span></span>
+          <span style="flex: 1"></span>
+          <span class="mono" style="font-size: 11px; color: #8A928A">live · {{envLabel}}</span>
+        </div>
+        <div class="mono scroll-x" style="max-height: 176px; padding: 8px 0; font-size: 11.5px; line-height: 1.5">
+          <sc-for list="{{logs}}" as="l" hint-placeholder-count="6">
+            <div style="display: grid; grid-template-columns: 92px 58px 150px minmax(0, 1fr); gap: 12px; padding: 3px 16px; white-space: nowrap">
+              <span style="color: #6F776F">{{l.t}}</span>
+              <span style="color: {{l.ink}}">{{l.lvl}}</span>
+              <span style="color: #C9D0C7; overflow: hidden; text-overflow: ellipsis">{{l.node}}</span>
+              <span style="color: #A3ABA2; overflow: hidden; text-overflow: ellipsis">{{l.msg}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </sc-if>
+  </main>
+
+  <aside aria-label="Node properties" style="flex: 1 1 300px; max-width: 100%; box-sizing: border-box; background: #0A0B0D; display: flex; flex-direction: column">
+    <div style="padding: 18px 18px 14px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.07)">
+      <span style="flex: none; width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: {{sel.chip}}; box-shadow: inset 0 0 0 1px {{sel.chipLine}}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{sel.ink}}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{sel.icon}}"></path></svg>
+      </span>
+      <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px">
+        <span class="mono" style="font-size: 10px; letter-spacing: 0.12em; color: #8A928A">{{sel.kicker}}</span>
+        <span style="font-size: 16px; font-weight: 500">{{sel.title}}</span>
+      </div>
+      <span class="mono" style="font-size: 11px; padding: 4px 9px; border-radius: 999px; color: {{sel.statusInk}}; background: {{sel.statusBg}}">{{sel.statusLabel}}</span>
+    </div>
+    <div style="display: flex; gap: 18px; padding: 0 18px; height: 40px; align-items: stretch; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 12.5px">
+      <span style="display: flex; align-items: center; color: #ECEFE9; box-shadow: inset 0 -2px 0 #C6F432">Properties</span>
+      <span style="display: flex; align-items: center; color: #8A928A">Input</span>
+      <span style="display: flex; align-items: center; color: #8A928A">Output</span>
+      <span style="display: flex; align-items: center; color: #8A928A">Docs</span>
+    </div>
+    <div style="padding: 16px 18px; display: flex; flex-direction: column; gap: 14px">
+      <sc-for list="{{sel.fields}}" as="f" hint-placeholder-count="4">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 11.5px; color: #8A928A">{{f.k}}</span>
+          <span class="{{f.cls}}" style="display: flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 10px; background: rgba(255,255,255,0.035); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); font-size: 13px; color: #ECEFE9">{{f.v}}</span>
+        </div>
+      </sc-for>
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 4px">
+        <span style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 13px">Node enabled</span>
+          <span style="font-size: 11.5px; color: #8A928A">Disabled nodes pass events through</span>
+        </span>
+        <button type="button" onClick="{{sel.toggle}}" aria-pressed="{{sel.enabled}}" aria-label="Node enabled" style="flex: none; width: 44px; height: 26px; border-radius: 999px; border: 0; padding: 3px; cursor: pointer; display: flex; justify-content: {{sel.knobAlign}}; background: {{sel.trackBg}}">
+          <span style="width: 20px; height: 20px; border-radius: 50%; background: {{sel.knobBg}}"></span>
+        </button>
+      </div>
+    </div>
+    <div style="margin: 0 18px 18px; padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; font-size: 12px">
+        <span style="color: #8A928A">Last message</span>
+        <span class="mono" style="color: #A3ABA2">{{sel.last}}</span>
+      </div>
+      <pre class="mono" style="margin: 0; font-size: 11px; line-height: 1.55; color: #C9D0C7; white-space: pre-wrap; word-break: break-all">{{sel.payload}}</pre>
+    </div>
+  </aside>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":960}}'>
+const NW = 196, NH = 80, STAGE_W = 940, STAGE_H = 620;
+const LIME = '#C6F432', AMBER = '#F5B841', CORAL = '#FF7A66', MUTED = '#6F776F';
+const ICON = {
+  trigger: 'M13 2 4 14h7l-1 8 9-12h-7z',
+  device: 'M3 8V4h4M17 4h4v4M21 16v4h-4M7 20H3v-4M7 12h10',
+  code: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 18h2v2h-2zM18 14h2M14 18v2',
+  logic: 'M6 3v6a4 4 0 0 0 4 4h8M6 9v12M15 10l3 3-3 3',
+  warehouse: 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10',
+  printer: 'M7 9V3h10v6M7 17H4v-7h16v7h-3M7 14h10v7H7z',
+  api: 'M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14',
+  plc: 'M6 6h12v12H6zM9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4',
+  notify: 'M21 4 3 11l6 2 2 6 3-4 5 4zM9 13l12-9',
+  production: 'M3 21V10l6 4V10l6 4V6l6 3v12z',
+  report: 'M5 3h10l4 4v14H5zM9 13h6M9 17h6'
+};
+const NODES = [
+  { id: 'n1', icon: 'trigger', kicker: 'TRIGGER · WMS', title: 'Pallet received', sub: 'wms.receiving.pallet', status: 'run', trigger: true, x: 20, y: 96,
+    fields: [['Source', 'WMS · Plant 01 · Dock 2'], ['Event', 'receiving.pallet.created'], ['Filter', 'warehouse = FG-1'], ['Concurrency', '8 parallel runs']],
+    last: '12:41:06.882', payload: '{\n  "sscc": "046071230000184522",\n  "dock": "D2",\n  "items": 48\n}' },
+  { id: 'n2', icon: 'device', kicker: 'DEVICE · SCANNER', title: 'TSD-14 scan', sub: 'sscc + datamatrix', status: 'run', trigger: true, x: 20, y: 300,
+    fields: [['Device', 'TSD-14 · Zebra MC3300'], ['Gateway', 'edge-gw-02 · Line 2'], ['Symbologies', 'GS1-128, DataMatrix'], ['Debounce', '300 ms']],
+    last: '12:41:06.410', payload: '{\n  "device": "TSD-14",\n  "code": "0104607123…",\n  "rssi": -54\n}' },
+  { id: 'n3', icon: 'code', kicker: 'CODE ANALYZER', title: 'Verify DataMatrix', sub: 'gs1 · crypto-tail', status: 'run', x: 248, y: 198,
+    fields: [['Ruleset', 'GS1 DataMatrix · marking v3'], ['Checks', 'Structure, GTIN, crypto tail'], ['Timeout', '1 500 ms'], ['On failure', 'Route to reject output']],
+    last: '12:41:06.951', payload: '{\n  "valid": true,\n  "gtin": "04607123000018",\n  "grade": "A"\n}' },
+  { id: 'n4', icon: 'logic', kicker: 'LOGIC · SWITCH', title: 'Code valid?', sub: '2 outputs · first match', status: 'run', isSwitch: true, x: 476, y: 198,
+    fields: [['Property', 'msg.payload.valid'], ['Rule 1 · valid', '== true  →  output 1'], ['Rule 2 · reject', 'otherwise  →  output 2'], ['Mode', 'Stop after first match']],
+    last: '12:41:06.955', payload: '{\n  "route": "valid",\n  "matched": 1\n}' },
+  { id: 'n5', icon: 'warehouse', kicker: 'WMS · PLACEMENT', title: 'Assign FIFO cell', sub: 'zone A · shelf-life ≥ 60%', status: 'run', x: 712, y: 24,
+    fields: [['Strategy', 'FEFO, then FIFO'], ['Zone', 'A · ambient racks'], ['Min shelf-life', '60 % remaining'], ['Fallback', 'Buffer zone B-00']],
+    last: '12:41:07.031', payload: '{\n  "cell": "A-12-03",\n  "expires": "2027-04-02"\n}' },
+  { id: 'n6', icon: 'printer', kicker: 'PRINTER · ZT411', title: 'Print SSCC label', sub: 'offline · retrying 2/5', status: 'error', x: 712, y: 140,
+    fields: [['Printer', 'ZT411 · Dock 2 · 192.168.12.40'], ['Template', 'SSCC pallet 100×150'], ['Retry policy', '5 × exponential, 2 s base'], ['On exhaust', 'Notify maintenance']],
+    last: '12:41:07.044', payload: '{\n  "error": "ECONNREFUSED",\n  "attempt": 2,\n  "next": "4 s"\n}' },
+  { id: 'n7', icon: 'api', kicker: 'WEBHOOK · ERP', title: 'POST goods receipt', sub: 'erp/receipts · 201', status: 'run', x: 712, y: 256,
+    fields: [['Method', 'POST'], ['Endpoint', '{{ERP_URL}}/receipts'], ['Auth', 'Vault secret · erp-prod'], ['Idempotency', 'sscc + dock']],
+    last: '12:41:07.180', payload: '{\n  "status": 201,\n  "doc": "GR-2026-104882"\n}' },
+  { id: 'n8', icon: 'plc', kicker: 'PLC · LINE 2', title: 'Divert to reject', sub: 'S7-1500 · DB12.DBX4.0', status: 'run', x: 712, y: 400,
+    fields: [['Controller', 'Siemens S7-1500 · Line 2'], ['Tag', 'DB12.DBX4.0 (bool)'], ['Write', 'true for 1 200 ms'], ['Interlock', 'Conveyor speed < 0.8 m/s']],
+    last: '12:39:52.204', payload: '{\n  "tag": "DB12.DBX4.0",\n  "value": true\n}' },
+  { id: 'n9', icon: 'notify', kicker: 'TELEGRAM', title: 'Notify shift lead', sub: '#line-2-quality', status: 'run', x: 712, y: 516,
+    fields: [['Channel', 'Telegram · #line-2-quality'], ['Template', 'Reject · {{gtin}} · {{reason}}'], ['Throttle', '1 per 5 min per GTIN'], ['Escalate', 'After 3 rejects / 15 min']],
+    last: '12:39:52.611', payload: '{\n  "sent": true,\n  "chat": "-100481…"\n}' }
+];
+const WIRES = [
+  ['w1', 'n1', 'n3', 'out'], ['w2', 'n2', 'n3', 'out'], ['w3', 'n3', 'n4', 'out'],
+  ['w4', 'n4', 'n5', 'o1'], ['w5', 'n4', 'n6', 'o1'], ['w6', 'n4', 'n7', 'o1'],
+  ['w7', 'n4', 'n8', 'o2'], ['w8', 'n4', 'n9', 'o2']
+];
+const CATS = [
+  { key: 'trigger', label: 'Triggers', icon: ICON.trigger, blocks: [['Pallet received', 'wms.receiving'], ['Truck at gate', 'yms.gate'], ['Schedule', 'core.cron'], ['Webhook in', 'http.in'], ['PLC tag change', 'plc.tag']] },
+  { key: 'device', label: 'Devices', icon: ICON.device, blocks: [['Scanner read', 'dev.scanner'], ['Label printer', 'dev.printer'], ['Camera frame', 'dev.camera'], ['Scale weight', 'dev.scale'], ['Andon light', 'dev.andon']] },
+  { key: 'warehouse', label: 'Warehouse', icon: ICON.warehouse, blocks: [['Assign cell (FEFO / FIFO)', 'wms.place'], ['Move pallet', 'wms.move'], ['Check shelf-life', 'wms.expiry'], ['Reserve stock', 'wms.reserve']] },
+  { key: 'production', label: 'Production', icon: ICON.production, blocks: [['Line event', 'aps.line'], ['Re-plan order', 'aps.replan'], ['OEE window', 'aps.oee'], ['Verify code', 'code.verify']] },
+  { key: 'logic', label: 'Logic', icon: ICON.logic, blocks: [['Switch', 'core.switch'], ['Filter', 'core.filter'], ['Delay / debounce', 'core.delay'], ['Join', 'core.join'], ['Function', 'core.fn']] },
+  { key: 'notify', label: 'Notifications', icon: ICON.notify, blocks: [['Telegram', 'notify.tg'], ['Email', 'notify.mail'], ['SMS', 'notify.sms']] },
+  { key: 'api', label: 'API / Webhooks', icon: ICON.api, blocks: [['HTTP request', 'http.req'], ['Webhook out', 'http.out'], ['ERP document', 'erp.doc'], ['MQTT publish', 'mqtt.pub']] },
+  { key: 'report', label: 'Reports', icon: ICON.report, blocks: [['Shift report', 'rpt.shift'], ['Export CSV', 'rpt.csv'], ['Dashboard tile', 'rpt.tile']] }
+];
+const LOGS = [
+  ['12:41:07.180', 'INFO', 'POST goods receipt', '201 Created · GR-2026-104882 · 136 ms'],
+  ['12:41:07.044', 'ERROR', 'Print SSCC label', 'ECONNREFUSED 192.168.12.40:9100 · retry 2/5 in 4 s'],
+  ['12:41:07.031', 'INFO', 'Assign FIFO cell', 'A-12-03 · expires 2027-04-02 · FEFO rank 1'],
+  ['12:41:06.955', 'DEBUG', 'Code valid?', 'route → valid (rule 1)'],
+  ['12:41:06.951', 'INFO', 'Verify DataMatrix', 'GTIN 04607123000018 · grade A · 69 ms'],
+  ['12:41:06.882', 'INFO', 'Pallet received', 'SSCC 046071230000184522 · dock D2 · 48 items'],
+  ['12:39:52.611', 'WARN', 'Notify shift lead', 'Reject routed · crypto tail mismatch · sent to #line-2-quality']
+];
+const LVL = { INFO: '#C6F432', ERROR: '#FF7A66', WARN: '#F5B841', DEBUG: '#8A928A' };
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const pos = {};
+    const enabled = {};
+    NODES.forEach((n) => { pos[n.id] = { x: n.x, y: n.y }; enabled[n.id] = true; });
+    this.state = { pos, enabled, selected: 'n4', running: true, drawer: true, cat: 'warehouse', env: 'production' };
+    this.drag = null;
+  }
+
+  status(n) {
+    if (!this.state.running || !this.state.enabled[n.id]) return 'paused';
+    return n.status;
+  }
+
+  bez(x1, y1, x2, y2) {
+    const dx = Math.max(36, Math.abs(x2 - x1) * 0.5);
+    return 'M' + x1 + ' ' + y1 + ' C' + (x1 + dx) + ' ' + y1 + ' ' + (x2 - dx) + ' ' + y2 + ' ' + x2 + ' ' + y2;
+  }
+
+  moveTo(id, x, y) {
+    const cx = Math.round(Math.min(Math.max(x, 8), STAGE_W - NW - 40) / 4) * 4;
+    const cy = Math.round(Math.min(Math.max(y, 8), STAGE_H - NH - 8) / 4) * 4;
+    this.setState({ pos: Object.assign({}, this.state.pos, { [id]: { x: cx, y: cy } }) });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const byId = {};
+    NODES.forEach((n) => { byId[n.id] = n; });
+
+    const nodes = NODES.map((n) => {
+      const p = s.pos[n.id];
+      const st = this.status(n);
+      const sel = s.selected === n.id;
+      const dot = st === 'run' ? LIME : st === 'error' ? CORAL : MUTED;
+      const accent = n.trigger ? LIME : st === 'error' ? CORAL : '#DCE2D9';
+      return {
+        id: n.id, x: p.x, y: p.y, kicker: n.kicker, title: n.title, icon: ICON[n.icon],
+        sub: st === 'paused' && n.status !== 'error' ? 'paused' : n.sub,
+        subInk: st === 'error' ? CORAL : '#8A928A',
+        aria: n.title + ', ' + n.kicker.toLowerCase() + ', ' + (st === 'run' ? 'running' : st),
+        selected: sel, isSwitch: !!n.isSwitch, hasOut: !n.isSwitch && !['n5', 'n6', 'n7', 'n8', 'n9'].includes(n.id),
+        dot,
+        ink: accent,
+        chip: n.trigger ? 'rgba(198,244,50,0.10)' : st === 'error' ? 'rgba(255,122,102,0.10)' : 'rgba(255,255,255,0.04)',
+        chipLine: n.trigger ? 'rgba(198,244,50,0.28)' : st === 'error' ? 'rgba(255,122,102,0.3)' : 'rgba(255,255,255,0.10)',
+        border: sel ? 'rgba(198,244,50,0.75)' : st === 'error' ? 'rgba(255,122,102,0.45)' : 'rgba(255,255,255,0.09)',
+        shadow: sel ? '0 0 0 4px rgba(198,244,50,0.10), 0 18px 40px -16px rgba(198,244,50,0.45)' : '0 16px 34px -20px rgba(0,0,0,0.9)',
+        portIn: st === 'paused' ? MUTED : LIME,
+        portOut: st === 'paused' ? MUTED : LIME,
+        cursor: s.drag === n.id ? 'grabbing' : 'grab',
+        down: (e) => {
+          if (e.button !== undefined && e.button !== 0) return;
+          const el = e.currentTarget;
+          try { el.setPointerCapture(e.pointerId); } catch (err) { /* capture unsupported */ }
+          const scale = (el.getBoundingClientRect().width / (el.offsetWidth || NW)) || 1;
+          this.drag = { id: n.id, sx: e.clientX, sy: e.clientY, ox: p.x, oy: p.y, scale };
+          this.setState({ selected: n.id, drag: n.id });
+        },
+        move: (e) => {
+          const d = this.drag;
+          if (!d || d.id !== n.id) return;
+          this.moveTo(n.id, d.ox + (e.clientX - d.sx) / d.scale, d.oy + (e.clientY - d.sy) / d.scale);
+        },
+        up: () => { if (this.drag) { this.drag = null; this.setState({ drag: null }); } },
+        key: (e) => {
+          const step = e.shiftKey ? 32 : 8;
+          const dir = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+          if (!dir) return;
+          e.preventDefault();
+          this.setState({ selected: n.id });
+          this.moveTo(n.id, p.x + dir[0], p.y + dir[1]);
+        }
+      };
+    });
+
+    const w = {};
+    WIRES.forEach(([key, from, to, port]) => {
+      const a = s.pos[from], b = s.pos[to];
+      const oy = port === 'o1' ? 27 : port === 'o2' ? 55 : 40;
+      const target = byId[to];
+      const st = this.status(target);
+      let stroke = LIME;
+      if (port === 'o2') stroke = AMBER;
+      if (st === 'error') stroke = CORAL;
+      if (st === 'paused') stroke = 'rgba(255,255,255,0.22)';
+      w[key] = {
+        d: this.bez(a.x + NW + 1, a.y + oy, b.x - 1, b.y + 40),
+        stroke,
+        cls: s.running && st !== 'paused' ? 'wire-flow' : ''
+      };
+    });
+
+    const n = byId[s.selected];
+    const st = this.status(n);
+    const enabled = s.enabled[n.id];
+    const sel = {
+      kicker: n.kicker, title: n.title, icon: ICON[n.icon],
+      ink: n.trigger ? LIME : n.status === 'error' ? CORAL : '#DCE2D9',
+      chip: n.trigger ? 'rgba(198,244,50,0.10)' : n.status === 'error' ? 'rgba(255,122,102,0.10)' : 'rgba(255,255,255,0.04)',
+      chipLine: n.trigger ? 'rgba(198,244,50,0.28)' : n.status === 'error' ? 'rgba(255,122,102,0.3)' : 'rgba(255,255,255,0.10)',
+      statusLabel: st === 'run' ? 'running' : st,
+      statusInk: st === 'run' ? '#0A0C05' : st === 'error' ? '#FFB3A6' : '#C9D0C7',
+      statusBg: st === 'run' ? LIME : st === 'error' ? 'rgba(255,122,102,0.14)' : 'rgba(255,255,255,0.08)',
+      fields: n.fields.map(([k, v]) => ({ k, v, cls: /^[\w.{}]+$/.test(v) || v.includes('==') || v.includes('DB') ? 'mono' : '' })),
+      last: n.last, payload: n.payload, enabled,
+      knobAlign: enabled ? 'flex-end' : 'flex-start',
+      trackBg: enabled ? LIME : 'rgba(255,255,255,0.12)',
+      knobBg: enabled ? '#0A0C05' : '#C9D0C7',
+      toggle: () => this.setState({ enabled: Object.assign({}, s.enabled, { [n.id]: !enabled }) })
+    };
+
+    const cats = CATS.map((c) => {
+      const active = s.cat === c.key;
+      return {
+        label: c.label, icon: c.icon, count: c.blocks.length, active,
+        style: active ? 'background: rgba(198,244,50,0.07); color: #ECEFE9' : '',
+        chip: active ? 'rgba(198,244,50,0.14)' : 'rgba(255,255,255,0.05)',
+        ink: active ? LIME : '#C9D0C7',
+        blocks: c.blocks.map(([name, id]) => ({ name, id })),
+        pick: () => this.setState({ cat: active ? null : c.key })
+      };
+    });
+
+    const ENV = [['dev', 'Dev'], ['staging', 'Staging'], ['production', 'Production']];
+    const envs = ENV.map(([key, label]) => ({
+      label, on: s.env === key,
+      style: s.env === key ? 'background: rgba(255,255,255,0.09); color: #ECEFE9; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08)' : '',
+      pick: () => this.setState({ env: key })
+    }));
+
+    return {
+      nodes, w, sel, cats, envs,
+      envLabel: ENV.find((e) => e[0] === s.env)[1].toLowerCase(),
+      running: s.running,
+      runLabel: s.running ? 'Running' : 'Paused',
+      runColor: s.running ? LIME : MUTED,
+      runDotClass: s.running ? 'pulse' : '',
+      toggleRun: () => this.setState({ running: !s.running }),
+      drawer: s.drawer,
+      toggleDrawer: () => this.setState({ drawer: !s.drawer }),
+      logs: LOGS.map(([t, lvl, node, msg]) => ({ t, lvl, node, msg, ink: LVL[lvl] }))
+    };
+  }
+}
+</script>
+</body>
+</html>

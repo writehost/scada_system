@@ -1,0 +1,31 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-10-19T09:00:00Z"},
+  "title": "SCADA Flow",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 1440, "h": 1180, "title": "01 · Overview", "expand": "fill"},
+    "Builder.dc.html": {"x": 1520, "y": 0, "w": 1440, "h": 960, "title": "02 · Workflow Builder", "expand": "fill", "is_interactive": true},
+    "Integrations.dc.html": {"x": 0, "y": 1300, "w": 1440, "h": 1320, "title": "03 · SCADA SYSTEM Integrations", "expand": "fill"},
+    "Templates.dc.html": {"x": 1520, "y": 1300, "w": 1440, "h": 1180, "title": "04 · Industrial Templates", "expand": "fill", "is_interactive": true},
+    "Monitoring.dc.html": {"x": 0, "y": 2740, "w": 1440, "h": 1240, "title": "05 · Runtime Monitoring", "expand": "fill", "is_interactive": true},
+    "Tenancy.dc.html": {"x": 1520, "y": 2740, "w": 1440, "h": 1240, "title": "06 · Multi-tenant Cloud", "expand": "fill"},
+    "MobileMonitor.dc.html": {"x": 0, "y": 4100, "w": 390, "h": 844, "title": "07a · Mobile · Runtime"},
+    "MobileAlerts.dc.html": {"x": 470, "y": 4100, "w": 390, "h": 844, "title": "07b · Mobile · Alerts", "is_interactive": true},
+    "MobileControl.dc.html": {"x": 940, "y": 4100, "w": 390, "h": 844, "title": "07c · Mobile · Control center", "is_interactive": true}
+  },
+  "order": [
+    "Main.dc.html",
+    "Builder.dc.html",
+    "Integrations.dc.html",
+    "Templates.dc.html",
+    "Monitoring.dc.html",
+    "Tenancy.dc.html",
+    "MobileMonitor.dc.html",
+    "MobileAlerts.dc.html",
+    "MobileControl.dc.html"
+  ],
+  "notes": {},
+  "designSystems": []
+}

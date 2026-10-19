@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SCADA Flow mobile — Alerts</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#060708}
+a{color:#C6F432;text-decoration:none}
+.sf{font-family:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;color:#ECEFE9;-webkit-font-smoothing:antialiased}
+.mono{font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace}
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.018));border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:52px;font-size:10.5px;color:#8A928A}
+.act{flex:1;height:44px;border-radius:12px;border:0;font:500 13px 'Geist',ui-sans-serif,system-ui,sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+</style>
+</helmet>
+<div class="sf" style="position: relative; width: 390px; height: 844px; overflow: hidden; background: radial-gradient(420px 300px at 50% 0%, rgba(255,122,102,0.07), transparent 70%), #060708; display: flex; flex-direction: column">
+  <div style="flex: 1; overflow: hidden; padding: 56px 18px 0; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; align-items: flex-end; justify-content: space-between">
+      <span style="display: flex; flex-direction: column; gap: 4px">
+        <span class="mono" style="font-size: 10.5px; letter-spacing: 0.12em; color: #8A928A">PLANT 01 · ON CALL</span>
+        <span style="font-size: 26px; font-weight: 500; letter-spacing: -0.02em">Alerts</span>
+      </span>
+      <span class="mono" style="font-size: 11px; padding: 5px 10px; border-radius: 999px; background: rgba(255,122,102,0.12); color: #FF9C8C">{{openCount}} open</span>
+    </div>
+
+    <div role="group" aria-label="Alert filter" style="display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: rgba(255,255,255,0.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08)">
+      <button type="button" aria-pressed="true" style="flex: 1; height: 38px; border: 0; border-radius: 9px; background: rgba(255,255,255,0.09); color: #ECEFE9; font: 500 13px 'Geist',ui-sans-serif,system-ui,sans-serif">Open</button>
+      <button type="button" aria-pressed="false" style="flex: 1; height: 38px; border: 0; border-radius: 9px; background: transparent; color: #A3ABA2; font: 500 13px 'Geist',ui-sans-serif,system-ui,sans-serif">Acknowledged</button>
+      <button type="button" aria-pressed="false" style="flex: 1; height: 38px; border: 0; border-radius: 9px; background: transparent; color: #A3ABA2; font: 500 13px 'Geist',ui-sans-serif,system-ui,sans-serif">Resolved</button>
+    </div>
+
+    <sc-for list="{{alerts}}" as="a" hint-placeholder-count="3">
+      <div class="glass" style="border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 12px; border-color: {{a.border}}; opacity: {{a.opacity}}">
+        <div style="display: flex; gap: 12px">
+          <span style="flex: none; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: {{a.chip}}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{a.ink}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="{{a.icon}}"></path></svg>
+          </span>
+          <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+            <span style="display: flex; justify-content: space-between; gap: 8px">
+              <span class="mono" style="font-size: 10.5px; letter-spacing: 0.1em; color: {{a.ink}}">{{a.level}}</span>
+              <span class="mono" style="font-size: 10.5px; color: #8A928A">{{a.ago}}</span>
+            </span>
+            <span style="font-size: 15px; font-weight: 500; line-height: 1.3">{{a.title}}</span>
+            <span style="font-size: 12.5px; line-height: 1.45; color: #A3ABA2">{{a.body}}</span>
+            <span class="mono" style="font-size: 10.5px; color: #8A928A">{{a.flow}}</span>
+          </span>
+        </div>
+        <sc-if value="{{a.open}}" hint-placeholder-val="{{true}}">
+          <div style="display: flex; gap: 8px">
+            <button class="act" type="button" onClick="{{a.ack}}" style="background: #ECEFE9; color: #0A0C05">Acknowledge</button>
+            <a class="act" href="#" style="background: rgba(255,255,255,0.05); color: #ECEFE9; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12)">{{a.action}}</a>
+          </div>
+        </sc-if>
+        <sc-if value="{{a.acked}}" hint-placeholder-val="{{false}}">
+          <span class="mono" style="font-size: 11px; color: #C6F432">✓ Acknowledged by you · escalation stopped</span>
+        </sc-if>
+      </div>
+    </sc-for>
+  </div>
+
+  <nav aria-label="Mobile tabs" style="display: flex; padding: 6px 10px 26px; background: rgba(8,9,10,0.92); border-top: 1px solid rgba(255,255,255,0.07); backdrop-filter: blur(20px)">
+    <a class="tab" href="MobileMonitor.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l3-7 4 14 3-7h4"></path></svg>Runtime</a>
+    <a class="tab" href="MobileAlerts.dc.html" aria-current="page" style="color: #C6F432"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 21h4"></path></svg>Alerts</a>
+    <a class="tab" href="#"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="6" r="2.2"></circle><circle cx="5" cy="18" r="2.2"></circle><circle cx="19" cy="12" r="2.6"></circle><path d="M7.2 6.4c5 0 4.6 5.6 9.2 5.6M7.2 17.6c5 0 4.6-5.6 9.2-5.6"></path></svg>Flows</a>
+    <a class="tab" href="MobileControl.dc.html"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path><circle cx="16" cy="7" r="2"></circle><circle cx="8" cy="17" r="2"></circle></svg>Control</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+const ERR = 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v5M12 16.5v.01';
+const WARN = 'M12 3 2 20h20zM12 10v4M12 17.5v.01';
+const ALERTS = [
+  { id: 'a1', kind: 'error', level: 'CRITICAL', ago: '2 min', title: 'Label printer ZT411 offline', body: 'Print SSCC label is retrying (2 of 5). Pallets at dock D2 wait for labels.', flow: 'receiving.line-2 · Print SSCC label', action: 'Open flow' },
+  { id: 'a2', kind: 'warn', level: 'WARNING', ago: '43 min', title: 'Line 2 stopped 4m 12s', body: 'No reason code entered. OEE for this shift fell to 71%.', flow: 'oee.downtime · Line stop > 3 min', action: 'Add reason' },
+  { id: 'a3', kind: 'error', level: 'ERROR', ago: '1 h', title: 'ERP rejected shipment posts', body: '401 Unauthorized. 12 messages parked in the dead-letter queue.', flow: 'shipment.notify · Post shipment', action: 'Replay 12' }
+];
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { acked: {} };
+  }
+
+  renderVals() {
+    const acked = this.state.acked;
+    const alerts = ALERTS.map((a) => {
+      const done = !!acked[a.id];
+      const err = a.kind === 'error';
+      return {
+        level: a.level, ago: a.ago, title: a.title, body: a.body, flow: a.flow, action: a.action,
+        open: !done, acked: done,
+        icon: err ? ERR : WARN,
+        ink: err ? '#FF9C8C' : '#F5B841',
+        chip: err ? 'rgba(255,122,102,0.12)' : 'rgba(245,184,65,0.12)',
+        border: done ? 'rgba(255,255,255,0.08)' : err ? 'rgba(255,122,102,0.3)' : 'rgba(245,184,65,0.25)',
+        opacity: done ? '0.62' : '1',
+        ack: () => this.setState({ acked: Object.assign({}, acked, { [a.id]: true }) })
+      };
+    });
+    return { alerts, openCount: alerts.filter((a) => a.open).length };
+  }
+}
+</script>
+</body>
+</html>

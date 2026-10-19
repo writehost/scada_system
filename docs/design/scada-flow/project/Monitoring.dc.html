@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SCADA Flow — Runtime Monitoring</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&amp;family=Geist+Mono:wght@400;500&amp;display=swap">
+<style>
+body{margin:0;background:#060708}
+a{color:#C6F432;text-decoration:none}a:hover{color:#DDFF6E}
+.sf{font-family:'Geist',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;color:#ECEFE9;-webkit-font-smoothing:antialiased}
+.mono{font-family:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace}
+.glass{background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 30px 60px -30px rgba(0,0,0,.9)}
+.navlink{color:#A3ABA2;font-size:14px}.navlink:hover{color:#ECEFE9}
+.seg{height:30px;padding:0 12px;border:0;border-radius:8px;background:transparent;color:#A3ABA2;font:500 12px 'Geist',ui-sans-serif,system-ui,sans-serif;cursor:pointer}
+.bar{cursor:crosshair}
+.lbl{font-size:11px;letter-spacing:.12em;color:#8A928A}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(198,244,50,.55)}60%{box-shadow:0 0 0 6px rgba(198,244,50,0)}}
+.pulse{animation:pulse 2.4s ease-out infinite}
+@media (max-width:900px){.hide-sm{display:none !important}}
+@media (prefers-reduced-motion:reduce){.pulse{animation:none}}
+</style>
+</helmet>
+<div class="sf" style="min-height: 1240px; background: radial-gradient(900px 400px at 20% 0%, rgba(198,244,50,0.06), transparent 65%), #060708">
+
+<header style="max-width: 1320px; margin: 0 auto; padding: 22px 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap">
+  <div style="display: flex; align-items: center; gap: 28px">
+    <a href="Main.dc.html" style="display: flex; align-items: center; gap: 12px; color: #ECEFE9" aria-label="SCADA Flow home">
+      <span style="width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, #1B1F14, #0B0D08); box-shadow: inset 0 0 0 1px rgba(198,244,50,0.35), 0 0 24px -4px rgba(198,244,50,0.45)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C6F432" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="6" r="2.2"></circle><circle cx="5" cy="18" r="2.2"></circle><circle cx="19" cy="12" r="2.6"></circle><path d="M7.2 6.4c5 0 4.6 5.6 9.2 5.6M7.2 17.6c5 0 4.6-5.6 9.2-5.6"></path></svg>
+      </span>
+      <span style="font-size: 17px; font-weight: 600; letter-spacing: -0.01em">SCADA Flow</span>
+    </a>
+    <nav class="hide-sm" style="display: flex; gap: 26px" aria-label="Primary">
+      <a class="navlink" href="Main.dc.html">Overview</a>
+      <a class="navlink" href="Builder.dc.html">Builder</a>
+      <a class="navlink" href="Integrations.dc.html">Integrations</a>
+      <a class="navlink" href="Templates.dc.html">Templates</a>
+      <a class="navlink" href="#" style="color: #ECEFE9">Runtime</a>
+      <a class="navlink" href="Tenancy.dc.html">Cloud</a>
+    </nav>
+  </div>
+  <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+    <button type="button" class="glass" style="height: 38px; padding: 0 14px; border-radius: 10px; color: #ECEFE9; font: 500 13px 'Geist',ui-sans-serif,system-ui,sans-serif; display: flex; align-items: center; gap: 8px; cursor: pointer">
+      Plant 01 · all lines
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+    </button>
+    <div role="group" aria-label="Time range" style="display: flex; gap: 2px; padding: 3px; border-radius: 10px; background: rgba(255,255,255,0.04); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08)">
+      <button class="seg" type="button" aria-pressed="false">1h</button>
+      <button class="seg" type="button" aria-pressed="true" style="background: rgba(255,255,255,0.09); color: #ECEFE9">24h</button>
+      <button class="seg" type="button" aria-pressed="false">7d</button>
+      <button class="seg" type="button" aria-pressed="false">30d</button>
+    </div>
+  </div>
+</header>
+
+<main style="max-width: 1240px; margin: 0 auto; padding: 24px 24px 72px; display: flex; flex-direction: column; gap: 16px">
+  <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 8px">
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <span class="mono lbl" style="color: #C6F432">05 · RUNTIME</span>
+      <h1 style="margin: 0; font-size: 34px; letter-spacing: -0.025em; font-weight: 500">Runtime overview</h1>
+    </div>
+    <div class="glass" style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-radius: 14px; border-color: rgba(198,244,50,0.25)">
+      <span class="pulse" style="width: 10px; height: 10px; border-radius: 50%; background: #C6F432"></span>
+      <span style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 14px; font-weight: 500">Runtime healthy</span>
+        <span class="mono" style="font-size: 11px; color: #8A928A">eu-central · 6 workers · last incident 12 d ago</span>
+      </span>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 12px">
+    <div class="glass" style="border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+      <span class="mono lbl">RUNS TODAY</span>
+      <span style="font-size: 30px; letter-spacing: -0.03em; font-weight: 500">46 017</span>
+      <span class="mono" style="font-size: 11.5px; color: #C6F432">▲ 6.2% vs yesterday</span>
+    </div>
+    <div class="glass" style="border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+      <span class="mono lbl">FAILED RUNS</span>
+      <span style="font-size: 30px; letter-spacing: -0.03em; font-weight: 500">37</span>
+      <span class="mono" style="font-size: 11.5px; color: #FF9C8C">0.08% · 2 flows affected</span>
+    </div>
+    <div class="glass" style="border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+      <span class="mono lbl">EXECUTION TIME</span>
+      <span style="font-size: 30px; letter-spacing: -0.03em; font-weight: 500">182<span style="font-size: 16px; color: #8A928A"> ms</span></span>
+      <span class="mono" style="font-size: 11.5px; color: #8A928A">median · p95 640 ms</span>
+    </div>
+    <div class="glass" style="border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+      <span class="mono lbl">ACTIVE TRIGGERS</span>
+      <span style="font-size: 30px; letter-spacing: -0.03em; font-weight: 500">126</span>
+      <span class="mono" style="font-size: 11.5px; color: #8A928A">across 31 flows</span>
+    </div>
+    <div class="glass" style="border-radius: 18px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+      <span class="mono lbl">THROUGHPUT</span>
+      <span style="font-size: 30px; letter-spacing: -0.03em; font-weight: 500">1 284<span style="font-size: 16px; color: #8A928A"> /min</span></span>
+      <span class="mono" style="font-size: 11.5px; color: #8A928A">events · peak 3 902</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+    <section class="glass" aria-label="Runs per hour" style="flex: 2 1 560px; min-width: 0; border-radius: 22px; padding: 22px; display: flex; flex-direction: column; gap: 18px">
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 12px">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 15px; font-weight: 500">Runs per hour</span>
+          <span style="font-size: 12.5px; color: #8A928A">All flows · Plant 01 · today</span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px">
+          <span class="mono" style="font-size: 22px; letter-spacing: -0.02em">{{readout.v}}</span>
+          <span class="mono" style="font-size: 11px; color: #8A928A">{{readout.t}}</span>
+        </div>
+      </div>
+      <div style="position: relative; height: 240px; display: flex; gap: 10px">
+        <div class="mono" style="display: flex; flex-direction: column; justify-content: space-between; font-size: 10.5px; color: #8A928A; padding-bottom: 22px; text-align: right; width: 34px">
+          <span>4k</span><span>3k</span><span>2k</span><span>1k</span><span>0</span>
+        </div>
+        <div style="position: relative; flex: 1; min-width: 0; display: flex; flex-direction: column">
+          <div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 0; bottom: 22px; display: flex; flex-direction: column; justify-content: space-between">
+            <span style="height: 1px; background: rgba(255,255,255,0.06)"></span><span style="height: 1px; background: rgba(255,255,255,0.06)"></span><span style="height: 1px; background: rgba(255,255,255,0.06)"></span><span style="height: 1px; background: rgba(255,255,255,0.06)"></span><span style="height: 1px; background: rgba(255,255,255,0.16)"></span>
+          </div>
+          <div style="position: relative; flex: 1; display: flex; align-items: flex-end; gap: 2px" onMouseLeave="{{clearHover}}">
+            <sc-for list="{{bars}}" as="b" hint-placeholder-count="24">
+              <div class="bar" onMouseEnter="{{b.hover}}" title="{{b.title}}" style="flex: 1; height: 100%; display: flex; align-items: flex-end">
+                <div style="width: 100%; height: {{b.h}}%; border-radius: 4px 4px 0 0; background: {{b.fill}}; box-shadow: {{b.glow}}"></div>
+              </div>
+            </sc-for>
+          </div>
+          <div class="mono" style="height: 22px; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10.5px; color: #8A928A">
+            <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>23:00</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="glass" aria-label="Runtime health" style="flex: 1 1 320px; min-width: 0; border-radius: 22px; padding: 22px; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span style="font-size: 15px; font-weight: 500">Runtime health</span>
+        <span class="mono" style="font-size: 11px; color: #8A928A">live</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; justify-content: space-between; font-size: 13px"><span>Worker CPU</span><span class="mono" style="color: #C9D0C7">42%</span></div>
+          <div style="height: 6px; border-radius: 99px; background: rgba(255,255,255,0.06)"><div style="width: 42%; height: 100%; border-radius: 99px; background: #C6F432"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; justify-content: space-between; font-size: 13px"><span>Queue depth</span><span class="mono" style="color: #C9D0C7">218 / 10k</span></div>
+          <div style="height: 6px; border-radius: 99px; background: rgba(255,255,255,0.06)"><div style="width: 3%; min-width: 6px; height: 100%; border-radius: 99px; background: #C6F432"></div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; justify-content: space-between; font-size: 13px"><span>Dead-letter queue</span><span class="mono" style="color: #F5B841">12 messages</span></div>
+          <div style="height: 6px; border-radius: 99px; background: rgba(255,255,255,0.06)"><div style="width: 12%; height: 100%; border-radius: 99px; background: #F5B841"></div></div>
+        </div>
+      </div>
+      <div style="height: 1px; background: rgba(255,255,255,0.07)"></div>
+      <div style="display: flex; flex-direction: column; gap: 10px; font-size: 13px">
+        <span class="mono lbl">EDGE GATEWAYS</span>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C6F432" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 3 3 5-6"></path></svg>
+          <span style="flex: 1">edge-gw-01 · Warehouse</span><span class="mono" style="font-size: 11.5px; color: #8A928A">online · 8 ms</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C6F432" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="m8 12 3 3 5-6"></path></svg>
+          <span style="flex: 1">edge-gw-02 · Line 2</span><span class="mono" style="font-size: 11.5px; color: #8A928A">online · 11 ms</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F5B841" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20zM12 10v4M12 17.5v.01"></path></svg>
+          <span style="flex: 1">edge-gw-03 · Yard</span><span class="mono" style="font-size: 11.5px; color: #F5B841">degraded · 240 ms</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: stretch">
+    <section class="glass" aria-label="Error log" style="flex: 2 1 560px; min-width: 0; border-radius: 22px; padding: 22px 0 10px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 22px">
+        <span style="font-size: 15px; font-weight: 500">Errors and warnings</span>
+        <a href="Builder.dc.html" style="font-size: 13px">Open in debugger</a>
+      </div>
+      <div style="overflow-x: auto">
+        <table style="width: 100%; min-width: 620px; border-collapse: collapse; font-size: 13px">
+          <thead>
+            <tr class="mono" style="font-size: 10.5px; letter-spacing: 0.1em; color: #8A928A; text-align: left">
+              <th style="padding: 8px 22px; font-weight: 400">LEVEL</th><th style="padding: 8px 12px; font-weight: 400">FLOW · NODE</th><th style="padding: 8px 12px; font-weight: 400">MESSAGE</th><th style="padding: 8px 22px; font-weight: 400; text-align: right">TIME</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-top: 1px solid rgba(255,255,255,0.06)">
+              <td style="padding: 12px 22px"><span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #FF9C8C"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16.5v.01"></path></svg>ERROR</span></td>
+              <td style="padding: 12px"><span style="display: flex; flex-direction: column; gap: 2px"><span>receiving.line-2</span><span class="mono" style="font-size: 11px; color: #8A928A">Print SSCC label</span></span></td>
+              <td style="padding: 12px; color: #C9D0C7">ECONNREFUSED 192.168.12.40:9100 · retry 2/5</td>
+              <td class="mono" style="padding: 12px 22px; text-align: right; font-size: 11.5px; color: #8A928A">12:41:07</td>
+            </tr>
+            <tr style="border-top: 1px solid rgba(255,255,255,0.06)">
+              <td style="padding: 12px 22px"><span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #FF9C8C"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16.5v.01"></path></svg>ERROR</span></td>
+              <td style="padding: 12px"><span style="display: flex; flex-direction: column; gap: 2px"><span>shipment.notify</span><span class="mono" style="font-size: 11px; color: #8A928A">Post shipment · ERP</span></span></td>
+              <td style="padding: 12px; color: #C9D0C7">401 Unauthorized · token refresh scheduled</td>
+              <td class="mono" style="padding: 12px 22px; text-align: right; font-size: 11.5px; color: #8A928A">12:22:51</td>
+            </tr>
+            <tr style="border-top: 1px solid rgba(255,255,255,0.06)">
+              <td style="padding: 12px 22px"><span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #F5B841"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20zM12 10v4"></path></svg>WARN</span></td>
+              <td style="padding: 12px"><span style="display: flex; flex-direction: column; gap: 2px"><span>oee.downtime</span><span class="mono" style="font-size: 11px; color: #8A928A">Line stop &gt; 3 min</span></span></td>
+              <td style="padding: 12px; color: #C9D0C7">Line 2 stopped 4m 12s · reason code missing</td>
+              <td class="mono" style="padding: 12px 22px; text-align: right; font-size: 11.5px; color: #8A928A">11:58:03</td>
+            </tr>
+            <tr style="border-top: 1px solid rgba(255,255,255,0.06)">
+              <td style="padding: 12px 22px"><span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: #F5B841"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20zM12 10v4"></path></svg>WARN</span></td>
+              <td style="padding: 12px"><span style="display: flex; flex-direction: column; gap: 2px"><span>yard.gate-sync</span><span class="mono" style="font-size: 11px; color: #8A928A">edge-gw-03</span></span></td>
+              <td style="padding: 12px; color: #C9D0C7">Gateway latency 240 ms · above 150 ms threshold</td>
+              <td class="mono" style="padding: 12px 22px; text-align: right; font-size: 11.5px; color: #8A928A">11:40:16</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="glass" aria-label="Deployment history" style="flex: 1 1 320px; min-width: 0; border-radius: 22px; padding: 22px; display: flex; flex-direction: column; gap: 16px">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span style="font-size: 15px; font-weight: 500">Deployments</span>
+        <span class="mono" style="font-size: 11px; color: #8A928A">receiving.line-2</span>
+      </div>
+      <div style="position: relative; display: flex; flex-direction: column; gap: 18px; padding-left: 22px">
+        <span aria-hidden="true" style="position: absolute; left: 5px; top: 6px; bottom: 6px; width: 1px; background: rgba(255,255,255,0.1)"></span>
+        <div style="position: relative; display: flex; flex-direction: column; gap: 4px">
+          <span aria-hidden="true" style="position: absolute; left: -22px; top: 4px; width: 11px; height: 11px; border-radius: 50%; background: #C6F432; box-shadow: 0 0 10px rgba(198,244,50,0.6)"></span>
+          <span style="display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px"><span>v14 → production</span><span class="mono" style="font-size: 11px; color: #C6F432">live</span></span>
+          <span class="mono" style="font-size: 11px; color: #8A928A">A. Morozova · today 09:12 · 3 sites</span>
+        </div>
+        <div style="position: relative; display: flex; flex-direction: column; gap: 4px">
+          <span aria-hidden="true" style="position: absolute; left: -22px; top: 4px; width: 11px; height: 11px; border-radius: 50%; background: #0A0B0D; box-shadow: inset 0 0 0 2px #8A928A"></span>
+          <span style="display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px"><span>v15 → staging</span><span class="mono" style="font-size: 11px; color: #8A928A">testing</span></span>
+          <span class="mono" style="font-size: 11px; color: #8A928A">I. Petrov · today 11:47 · 1 site</span>
+        </div>
+        <div style="position: relative; display: flex; flex-direction: column; gap: 4px">
+          <span aria-hidden="true" style="position: absolute; left: -22px; top: 4px; width: 11px; height: 11px; border-radius: 50%; background: #0A0B0D; box-shadow: inset 0 0 0 2px #F5B841"></span>
+          <span style="display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px"><span>v13 rolled back</span><span class="mono" style="font-size: 11px; color: #F5B841">rollback</span></span>
+          <span class="mono" style="font-size: 11px; color: #8A928A">auto · Oct 16 · error rate &gt; 2%</span>
+        </div>
+        <div style="position: relative; display: flex; flex-direction: column; gap: 4px">
+          <span aria-hidden="true" style="position: absolute; left: -22px; top: 4px; width: 11px; height: 11px; border-radius: 50%; background: #0A0B0D; box-shadow: inset 0 0 0 2px #8A928A"></span>
+          <span style="display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px"><span>v12 → production</span><span class="mono" style="font-size: 11px; color: #8A928A">superseded</span></span>
+          <span class="mono" style="font-size: 11px; color: #8A928A">A. Morozova · Oct 9 · 3 sites</span>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1240}}'>
+const RUNS = [620, 540, 480, 455, 470, 690, 1480, 2620, 3210, 3380, 3150, 2980, 2410, 2870, 3290, 3420, 3180, 2890, 2240, 1720, 1310, 1040, 860, 712];
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { hover: null };
+  }
+
+  renderVals() {
+    const h = this.state.hover;
+    const total = RUNS.reduce((a, b) => a + b, 0);
+    const bars = RUNS.map((v, i) => {
+      const on = h === i;
+      const hour = String(i).padStart(2, '0') + ':00';
+      return {
+        h: Math.max(1.5, (v / 4000) * 100).toFixed(1),
+        fill: on ? '#E4FF8A' : h === null ? '#C6F432' : 'rgba(198,244,50,0.45)',
+        glow: on ? '0 0 18px rgba(198,244,50,0.55)' : 'none',
+        title: hour + ' · ' + v.toLocaleString('en-US') + ' runs',
+        hover: () => this.setState({ hover: i })
+      };
+    });
+    const readout = h === null
+      ? { v: total.toLocaleString('en-US').replace(/,/g, ' '), t: 'runs today · hover a bar' }
+      : { v: RUNS[h].toLocaleString('en-US').replace(/,/g, ' '), t: String(h).padStart(2, '0') + ':00 – ' + String(h).padStart(2, '0') + ':59 · runs' };
+    return { bars, readout, clearHover: () => this.setState({ hover: null }) };
+  }
+}
+</script>
+</body>
+</html>
