@@ -2,6 +2,8 @@ import type { WmsAuthSession } from "./types"
 
 export const SESSION_TTL_MS = 24 * 60 * 60 * 1000
 export const SESSION_TTL_SEC = 24 * 60 * 60
+/** Сессии YMS помечены audience, чтобы токен другого приложения с тем же секретом не проходил в Route. */
+export const SESSION_AUDIENCE = "yms"
 
 function getSecret(): string {
   const secret = process.env.WMS_AUTH_SECRET?.trim()
@@ -67,6 +69,7 @@ export async function createSessionToken(input: {
     roleCodes: input.roleCodes,
     iat: now,
     exp: now + SESSION_TTL_MS,
+    aud: SESSION_AUDIENCE,
   }
   const data = toBase64Url(encoder.encode(JSON.stringify(payload)))
   const sig = await hmacSign(data, getSecret())

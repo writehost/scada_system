@@ -14,6 +14,8 @@ export type WmsAuthSession = {
   exp: number
   /** Время выдачи (мс). Старые cookie без поля считаются выданными за TTL до exp. */
   iat?: number
+  /** Для какого приложения выдана сессия. Route принимает только "yms". */
+  aud?: string
 }
 
 export const WMS_SESSION_COOKIE = "yms_session"

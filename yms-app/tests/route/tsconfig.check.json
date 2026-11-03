@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.yms.json",
+  "compilerOptions": {
+    "strict": true,
+    "allowJs": false,
+    "paths": {
+      "@/*": ["../../*"],
+      "pg": ["./shims/pg/index.d.ts"],
+      "next/server": ["./shims/next-server/index.ts"],
+      "next/headers": ["./shims/next-headers/index.ts"]
+    }
+  },
+  "include": ["../../lib/route/**/*.ts", "../../app/api/route/**/*.ts", "./unit.test.ts", "./harness/*.ts"]
+}

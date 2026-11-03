@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "typeRoots": ["/home/claude/shimdeps/node_modules/@types"],
+    "types": ["node"],
+    "paths": {
+      "@/*": ["../../*"],
+      "pg": ["./shims/pg/index.js"],
+      "next/server": ["./shims/next-server/index.ts"],
+      "next/headers": ["./shims/next-headers/index.ts"]
+    }
+  }
+}
