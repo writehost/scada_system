@@ -59,9 +59,7 @@ async function open(
       return { error: NextResponse.json({ error: "unknown siteCode", code: "unknown_site" }, { status: 404 }) }
     }
     await ensureRouteSchema(client)
-    await client.query("BEGIN")
     await ensureRoutePermissionRows(client)
-    await client.query("COMMIT")
     const actor = await resolveRouteActor(req, client, siteId)
     if (permission) requirePermission(actor, permission)
     return { ctx: { client, pool, siteId, siteCode, actor, body, url, req } }

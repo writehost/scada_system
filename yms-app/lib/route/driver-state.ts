@@ -12,6 +12,9 @@ import {
 } from "@/lib/route/tasks"
 import { TYPE_LABEL } from "@/lib/route/state-machine"
 
+/** Подсказка «Следом» — без изменения состояния; пересчёт не чаще раза в 10 с на погрузчик. */
+const nextCache = new Map<string, { at: number; key: string; value: unknown }>()
+
 /**
  * Всё, что нужно одному экрану водителя, одним ответом.
  * Если погрузчик свободен — YMS сразу предлагает подходящее задание (offerNext).
@@ -27,15 +30,23 @@ export async function driverState(client: PoolClient, siteId: number, actor: Rou
   const position = await getPosition(client, siteId, session.karaId)
   const forklift = await getForklift(client, siteId, session.karaId)
   const view = task ? await taskView(client, task, { position }) : null
-  let next = null
-  const peek = await bestCandidate(client, siteId, session.karaId, { lock: false, excludeTaskId: task?.taskId })
-  if (peek && task) {
-    next = {
-      taskNo: peek.task.taskNo,
-      typeLabel: TYPE_LABEL[peek.task.type],
-      sourceCode: peek.task.sourceCode,
-      destCode: peek.task.destCode,
-      emptyRunM: peek.score.emptyRunM,
+  let next: unknown = null
+  if (task) {
+    const ck = `${siteId}:${session.karaId}`
+    const hit = nextCache.get(ck)
+    if (hit && hit.key === task.taskId && Date.now() - hit.at < 10_000) next = hit.value
+    else {
+      const peek = await bestCandidate(client, siteId, session.karaId, { lock: false, excludeTaskId: task.taskId, limit: 40 })
+      next = peek
+        ? {
+            taskNo: peek.task.taskNo,
+            typeLabel: TYPE_LABEL[peek.task.type],
+            sourceCode: peek.task.sourceCode,
+            destCode: peek.task.destCode,
+            emptyRunM: peek.score.emptyRunM,
+          }
+        : null
+      nextCache.set(ck, { at: Date.now(), key: task.taskId, value: next })
     }
   }
   const open = await client.query<{ n: number }>(

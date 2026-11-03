@@ -198,6 +198,7 @@ let rowsReady = false
 /** Права и роли Route в справочнике WMS (если таблицы есть). Ошибка схемы не ломает вход. */
 export async function ensureRoutePermissionRows(client: PoolClient): Promise<void> {
   if (rowsReady) return
+  await client.query("BEGIN")
   try {
     await client.query("SAVEPOINT route_perm_rows")
     await client.query(
@@ -220,6 +221,7 @@ export async function ensureRoutePermissionRows(client: PoolClient): Promise<voi
   } catch {
     await client.query("ROLLBACK TO SAVEPOINT route_perm_rows").catch(() => undefined)
   }
+  await client.query("COMMIT")
   rowsReady = true
 }
 

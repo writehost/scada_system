@@ -29,3 +29,7 @@ android/app/build/
 android/build/
 android/captures/
 .vercel
+
+# SCADA System Route — локализатор (Python)
+route-localization/**/__pycache__/
+route-localization/.pytest_cache/

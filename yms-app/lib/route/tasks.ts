@@ -618,11 +618,11 @@ export async function activeTaskForKara(client: PoolClient, siteId: number, kara
   return r.rows[0] ?? null
 }
 
-async function queuedCandidates(client: PoolClient, siteId: number, lock: boolean): Promise<TaskRow[]> {
+async function queuedCandidates(client: PoolClient, siteId: number, lock: boolean, limit = 300): Promise<TaskRow[]> {
   const r = await client.query<TaskRow>(
     `SELECT ${TASK_COLS} FROM route_tasks t WHERE t.site_id = $1 AND t.status = 'QUEUED'
-     ORDER BY t.priority DESC, t.created_at LIMIT 300 ${lock ? "FOR UPDATE SKIP LOCKED" : ""}`,
-    [siteId]
+     ORDER BY t.priority DESC, t.created_at LIMIT $2 ${lock ? "FOR UPDATE SKIP LOCKED" : ""}`,
+    [siteId, limit]
   )
   return r.rows
 }
@@ -642,7 +642,12 @@ function toCandidate(t: TaskRow): Candidate {
 }
 
 /** Рассчитать лучший кандидат для погрузчика (без изменения состояния). */
-export async function bestCandidate(client: PoolClient, siteId: number, karaId: string, opts: { lock: boolean; excludeTaskId?: string } = { lock: false }) {
+export async function bestCandidate(
+  client: PoolClient,
+  siteId: number,
+  karaId: string,
+  opts: { lock: boolean; excludeTaskId?: string; limit?: number } = { lock: false }
+) {
   const map = await getPublishedMap(client, siteId)
   if (!map) return null
   const kara = await getForklift(client, siteId, karaId)
@@ -650,7 +655,7 @@ export async function bestCandidate(client: PoolClient, siteId: number, karaId: 
   const blocked = await blockedEdgeSet(client, siteId)
   const pos = await getPosition(client, siteId, karaId)
   const at = usablePosition(pos)
-  const rows = (await queuedCandidates(client, siteId, opts.lock)).filter((t) => t.taskId !== opts.excludeTaskId)
+  const rows = (await queuedCandidates(client, siteId, opts.lock, opts.limit)).filter((t) => t.taskId !== opts.excludeTaskId)
   const byId = new Map(rows.map((t) => [t.taskId, t]))
   const constraints = { forkliftType: kara.forkliftType, widthM: kara.widthM, heightM: kara.heightM, blockedEdgeIds: blocked }
   const ranked = rankCandidates(rows.map(toCandidate), { karaId, forkliftType: kara.forkliftType }, (c) => {

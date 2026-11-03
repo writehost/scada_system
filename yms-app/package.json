@@ -5,7 +5,11 @@
     "dev": "next dev --webpack -H 0.0.0.0 -p 3014",
     "build": "next build --webpack",
     "start": "next start -H 127.0.0.1 -p 3014",
-    "test": "node --experimental-strip-types --test scripts/test-ops.mjs"
+    "test": "node --experimental-strip-types --test scripts/test-ops.mjs",
+    "test:route:unit": "tsx --tsconfig tests/route/tsconfig.yms.json --test tests/route/unit.test.ts",
+    "test:route": "node --test --test-timeout=60000 tests/route/acceptance.test.mjs",
+    "test:route:ui": "node tests/route/preview/build.mjs /tmp/route-preview && node tests/route/ui.e2e.mjs /tmp/route-shots",
+    "route:draft-map": "python3 scripts/route-draft-map.py"
   },
   "dependencies": {
     "next": "16.2.4",
