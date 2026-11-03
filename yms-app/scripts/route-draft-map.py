@@ -265,6 +265,8 @@ def build(racks):
     def nearest_on_edges(p):
         best = None
         for idx, e in enumerate(edges):
+            if e.get("spur"):
+                continue  # к подъезду другого ряда не примыкаем — только к осевой проезда
             A, B = by_id[e["a"]], by_id[e["b"]]
             ax, ay, bx, by = A["x"], A["y"], B["x"], B["y"]
             dx, dy = bx - ax, by - ay
@@ -319,7 +321,7 @@ def build(racks):
         nodes.append({"id": acc_id, "x": round(acc[0], 1), "y": round(acc[1], 1), "kind": "access", "label": r["rowId"]})
         by_id[acc_id] = nodes[-1]
         if math.dist(acc, (by_id[join]["x"], by_id[join]["y"])) > 0.5:
-            edges.append({"a": acc_id, "b": join})
+            edges.append({"a": acc_id, "b": join, "spur": True})
         addresses.append({"locationCode": "FG-" + r["rowId"].upper(), "nodeId": acc_id})
         access_count += 1
         seen_rows.add(r["rowId"])

@@ -1,0 +1,632 @@
+/* SCADA System Route — индустриальный навигатор: графит, контрастная карта, акценты только по делу. */
+:root {
+  --rt-bg: #15181b;
+  --rt-panel: #1f2428;
+  --rt-panel-2: #272d32;
+  --rt-line: #343b42;
+  --rt-text: #eef1f3;
+  --rt-muted: #9aa5ae;
+  --rt-accent: #38e0b2;
+  --rt-accent-ink: #062a20;
+  --rt-warn: #ffd23f;
+  --rt-danger: #ff5a5a;
+  --rt-ok: #4cd97b;
+  --rt-pick: #4aa8ff;
+  --rt-drop: #ff9f43;
+  --rt-font: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+}
+
+.rt-root {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--rt-bg);
+  color: var(--rt-text);
+  font-family: var(--rt-font);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+/* ---------- водитель: одна страница 100% высоты, без прокрутки ---------- */
+.rt-driver {
+  display: grid;
+  grid-template-rows: clamp(44px, 10vh, 76px) minmax(0, 1fr) auto;
+  height: 100%;
+  width: 100%;
+}
+
+.rt-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 12px;
+  background: var(--rt-panel);
+  border-bottom: 1px solid var(--rt-line);
+  min-width: 0;
+  font-size: clamp(13px, 1.9vh, 17px);
+}
+.rt-brand {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.rt-brand small {
+  display: block;
+  font-weight: 500;
+  color: var(--rt-muted);
+  font-size: 0.75em;
+  letter-spacing: 0.08em;
+}
+.rt-top .rt-kara {
+  font-weight: 800;
+  font-size: 1.15em;
+  white-space: nowrap;
+}
+.rt-top .rt-who {
+  color: var(--rt-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.rt-top .rt-spacer {
+  flex: 1;
+}
+.rt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--rt-line);
+  background: var(--rt-panel-2);
+  white-space: nowrap;
+  font-weight: 600;
+}
+.rt-chip .ic {
+  font-size: 1.05em;
+}
+.rt-chip.ok {
+  border-color: rgba(76, 217, 123, 0.5);
+  color: var(--rt-ok);
+}
+.rt-chip.warn {
+  border-color: rgba(255, 210, 63, 0.55);
+  color: var(--rt-warn);
+}
+.rt-chip.bad {
+  border-color: rgba(255, 90, 90, 0.6);
+  color: var(--rt-danger);
+  background: rgba(255, 90, 90, 0.12);
+}
+.rt-chip.info {
+  color: var(--rt-text);
+}
+
+.rt-mapwrap {
+  position: relative;
+  min-height: 0;
+}
+.rt-map {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.rt-map-ctl {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  display: grid;
+  gap: 8px;
+}
+.rt-map-ctl button {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  border: 1px solid var(--rt-line);
+  background: rgba(31, 36, 40, 0.92);
+  color: var(--rt-text);
+  font-size: 24px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.rt-map-ctl button.on {
+  color: var(--rt-accent);
+  border-color: var(--rt-accent);
+}
+.rt-banner {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  right: 80px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  pointer-events: none;
+}
+.rt-banner .rt-chip {
+  background: rgba(21, 24, 27, 0.9);
+  pointer-events: auto;
+}
+.rt-offline {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+  background: var(--rt-danger);
+  color: #fff;
+  font-weight: 800;
+  padding: 8px 16px;
+  border-radius: 10px;
+  z-index: 5;
+  font-size: clamp(14px, 2.2vh, 20px);
+}
+
+.rt-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--rt-panel);
+  border-top: 1px solid var(--rt-line);
+  max-height: 38vh;
+}
+.rt-card.compact {
+  max-height: 26vh;
+}
+.rt-what {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 4px;
+}
+.rt-step {
+  color: var(--rt-muted);
+  font-size: clamp(12px, 1.8vh, 15px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.rt-instr {
+  font-size: clamp(20px, 4.2vh, 36px);
+  font-weight: 800;
+  line-height: 1.12;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.rt-instr.bad {
+  color: var(--rt-danger);
+}
+.rt-instr.ok {
+  color: var(--rt-ok);
+}
+.rt-legs {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: clamp(14px, 2.3vh, 19px);
+  font-weight: 700;
+}
+.rt-legs .pick {
+  color: var(--rt-pick);
+}
+.rt-legs .drop {
+  color: var(--rt-drop);
+}
+.rt-legs .dim {
+  color: var(--rt-muted);
+  font-weight: 600;
+}
+.rt-cargo {
+  font-size: clamp(13px, 2vh, 17px);
+  color: var(--rt-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rt-cargo code {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-weight: 700;
+  color: var(--rt-warn);
+}
+.rt-scan {
+  font-size: clamp(13px, 2vh, 17px);
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.rt-scan.ok {
+  background: rgba(76, 217, 123, 0.14);
+  color: var(--rt-ok);
+}
+.rt-scan.bad {
+  background: rgba(255, 90, 90, 0.16);
+  color: var(--rt-danger);
+}
+.rt-next {
+  color: var(--rt-muted);
+  font-size: clamp(12px, 1.8vh, 15px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rt-actions {
+  display: grid;
+  gap: 8px;
+  align-content: center;
+  min-width: clamp(220px, 30vw, 380px);
+}
+.rt-btn {
+  min-height: 56px;
+  min-width: 56px;
+  border-radius: 12px;
+  border: 1px solid var(--rt-line);
+  background: var(--rt-panel-2);
+  color: var(--rt-text);
+  font-size: clamp(16px, 2.6vh, 21px);
+  font-weight: 800;
+  padding: 0 16px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.rt-btn.primary {
+  background: var(--rt-accent);
+  color: var(--rt-accent-ink);
+  border-color: var(--rt-accent);
+  min-height: clamp(64px, 11vh, 92px);
+  font-size: clamp(19px, 3.3vh, 28px);
+}
+.rt-btn.danger {
+  border-color: rgba(255, 90, 90, 0.6);
+  color: var(--rt-danger);
+}
+.rt-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.rt-row {
+  display: flex;
+  gap: 8px;
+}
+.rt-row > * {
+  flex: 1;
+}
+
+/* модальное окно «Проблема»/ручной ввод — компактное, без перехода на страницу */
+.rt-modal-back {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 30;
+}
+.rt-modal {
+  width: min(640px, calc(100vw - 20px));
+  max-height: calc(100vh - 20px);
+  overflow: auto;
+  background: var(--rt-panel);
+  border: 1px solid var(--rt-line);
+  border-radius: 14px;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+}
+.rt-modal h2 {
+  margin: 0;
+  font-size: 22px;
+}
+.rt-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.rt-input {
+  min-height: 52px;
+  border-radius: 10px;
+  border: 1px solid var(--rt-line);
+  background: var(--rt-bg);
+  color: var(--rt-text);
+  padding: 0 12px;
+  font-size: 18px;
+  width: 100%;
+  box-sizing: border-box;
+  user-select: text;
+}
+.rt-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 40vh;
+  transform: translateX(-50%);
+  background: #0b0d0f;
+  border: 1px solid var(--rt-line);
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  z-index: 40;
+  max-width: 90vw;
+}
+
+/* выбор погрузчика */
+.rt-pick {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.rt-pick-list {
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  align-content: start;
+  overflow: auto;
+}
+.rt-pick-list button {
+  min-height: 96px;
+  border-radius: 14px;
+  border: 1px solid var(--rt-line);
+  background: var(--rt-panel);
+  color: var(--rt-text);
+  font-size: 24px;
+  font-weight: 800;
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+  place-items: center;
+  padding: 8px;
+}
+.rt-pick-list button small {
+  font-size: 14px;
+  color: var(--rt-muted);
+  font-weight: 600;
+}
+.rt-pick-list button:disabled {
+  opacity: 0.45;
+}
+
+/* компактная раскладка для 800×480 и ниже */
+@media (max-height: 520px) {
+  .rt-card {
+    padding: 6px 10px;
+    gap: 8px;
+  }
+  .rt-card.has-scan .rt-cargo,
+  .rt-next {
+    display: none;
+  }
+  .rt-what {
+    gap: 2px;
+  }
+  .rt-scan {
+    padding: 4px 8px;
+  }
+  .rt-instr {
+    -webkit-line-clamp: 1;
+  }
+  .rt-actions {
+    min-width: 200px;
+    gap: 6px;
+  }
+  .rt-btn {
+    min-height: 56px;
+  }
+  .rt-btn.primary {
+    min-height: 60px;
+  }
+  .rt-top .rt-who,
+  .rt-brand small {
+    display: none;
+  }
+  .rt-map-ctl button {
+    width: 56px;
+    height: 56px;
+  }
+}
+@media (max-width: 700px) {
+  .rt-card {
+    grid-template-columns: 1fr;
+  }
+  .rt-actions {
+    min-width: 0;
+  }
+  .rt-top .rt-who {
+    display: none;
+  }
+}
+
+/* ---------- диспетчер и редактор ---------- */
+.rt-desk {
+  display: grid;
+  grid-template-rows: 56px minmax(0, 1fr);
+  height: 100%;
+}
+.rt-desk-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 34vw);
+  min-height: 0;
+}
+.rt-side {
+  border-left: 1px solid var(--rt-line);
+  background: var(--rt-panel);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+}
+.rt-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid var(--rt-line);
+}
+.rt-tabs button {
+  border: 1px solid var(--rt-line);
+  background: var(--rt-panel-2);
+  color: var(--rt-text);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+}
+.rt-tabs button.on {
+  background: var(--rt-accent);
+  color: var(--rt-accent-ink);
+  border-color: var(--rt-accent);
+}
+.rt-tabs button .n {
+  margin-left: 6px;
+  background: var(--rt-danger);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 12px;
+}
+.rt-pane {
+  overflow: auto;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  user-select: text;
+}
+.rt-item {
+  border: 1px solid var(--rt-line);
+  background: var(--rt-panel-2);
+  border-radius: 10px;
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+.rt-item.sel {
+  border-color: var(--rt-accent);
+}
+.rt-item .h {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-weight: 800;
+}
+.rt-item .m {
+  color: var(--rt-muted);
+}
+.rt-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--rt-line);
+}
+.rt-badge.bad {
+  background: rgba(255, 90, 90, 0.22);
+  color: var(--rt-danger);
+}
+.rt-badge.ok {
+  background: rgba(76, 217, 123, 0.2);
+  color: var(--rt-ok);
+}
+.rt-badge.warn {
+  background: rgba(255, 210, 63, 0.2);
+  color: var(--rt-warn);
+}
+.rt-mini {
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--rt-line);
+  background: var(--rt-bg);
+  color: var(--rt-text);
+  padding: 0 10px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 13px;
+}
+.rt-mini.primary {
+  background: var(--rt-accent);
+  color: var(--rt-accent-ink);
+  border-color: var(--rt-accent);
+}
+.rt-mini.danger {
+  color: var(--rt-danger);
+  border-color: rgba(255, 90, 90, 0.5);
+}
+.rt-field {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--rt-muted);
+}
+.rt-field input,
+.rt-field select,
+.rt-field textarea {
+  min-height: 38px;
+  border-radius: 8px;
+  border: 1px solid var(--rt-line);
+  background: var(--rt-bg);
+  color: var(--rt-text);
+  padding: 0 10px;
+  font-size: 14px;
+}
+.rt-field textarea {
+  padding: 8px 10px;
+  min-height: 60px;
+}
+.rt-kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  font-size: 13px;
+}
+.rt-kv dt {
+  color: var(--rt-muted);
+}
+.rt-kv dd {
+  margin: 0;
+}
+.rt-tools {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: calc(100% - 90px);
+}
+.rt-tools button {
+  min-height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--rt-line);
+  background: rgba(31, 36, 40, 0.94);
+  color: var(--rt-text);
+  font-weight: 700;
+  padding: 0 10px;
+  cursor: pointer;
+}
+.rt-tools button.on {
+  background: var(--rt-accent);
+  color: var(--rt-accent-ink);
+}
+
+/* 1024×600 и подобные: карточка не выше трети экрана */
+@media (max-height: 680px) {
+  .rt-card.has-scan .rt-cargo,
+  .rt-next {
+    display: none;
+  }
+  .rt-instr {
+    -webkit-line-clamp: 1;
+  }
+  .rt-btn.primary {
+    min-height: 64px;
+  }
+}

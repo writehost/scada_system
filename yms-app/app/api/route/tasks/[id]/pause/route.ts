@@ -1,5 +1,5 @@
 import { cmdOf, scanInput, withDriverState } from "@/lib/route/api"
-import { str, withRouteTx } from "@/lib/route/http"
+import { fail, str, withRouteTx } from "@/lib/route/http"
 import * as T from "@/lib/route/tasks"
 
 export const runtime = "nodejs"
@@ -14,7 +14,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { session, user } = await T.requireSession(ctx.client, ctx.siteId, ctx.actor)
     const cmd = cmdOf(ctx, id)
     const t = await T.loadTask(ctx.client, ctx.siteId, id, true)
-    if (t.karaId !== session.karaId) throw new Error("not own")
+    if (t.karaId !== session.karaId) fail(409, "Задание переназначено на другой погрузчик", "task_reassigned")
     const action = t.status === "PAUSED" ? "resume" : "pause"
     const next = await T.transition(ctx.client, t, action, {
       actor: user.login,
