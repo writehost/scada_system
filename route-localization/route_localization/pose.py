@@ -33,6 +33,7 @@ class MarkerInfo:
     pitch_deg: float = 0.0
     roll_deg: float = 0.0
     active: bool = True
+    mount: str = "ceiling"
 
 
 @dataclass
@@ -77,7 +78,7 @@ class PoseEstimator:
         self.T_b_c = camera_in_body(calib.camera_to_forklift)
         self._world_corners: dict[tuple[str, int], np.ndarray] = {}
         for key, m in self.markers.items():
-            T_w_m = marker_pose_world(frame, m.x, m.y, m.z_m, m.yaw_deg, m.pitch_deg, m.roll_deg)
+            T_w_m = marker_pose_world(frame, m.x, m.y, m.z_m, m.yaw_deg, m.pitch_deg, m.roll_deg, m.mount)
             local = tag_corners_local(m.size_m)
             self._world_corners[key] = (T_w_m[:3, :3] @ local.T).T + T_w_m[:3, 3]
 
@@ -89,10 +90,13 @@ class PoseEstimator:
         R, _ = cv2.Rodrigues(rvec)
         return inv_T(make_T(R, tvec.reshape(3)))  # world←camera
 
-    def _plausible(self, T_w_c: np.ndarray, tag_z: float) -> str | None:
+    def _plausible(self, T_w_c: np.ndarray, m: "MarkerInfo", T_w_m: np.ndarray) -> str | None:
         cam_z = T_w_c[2, 3]
-        if cam_z > tag_z - self.limits.min_camera_below_tag_m:
+        if m.mount == "ceiling" and cam_z > m.z_m - self.limits.min_camera_below_tag_m:
             return "камера выше метки"
+        # камера должна быть перед лицевой стороной метки (иначе это зеркальное решение PnP)
+        if float(T_w_m[:3, 2] @ (T_w_c[:3, 3] - T_w_m[:3, 3])) <= 0:
+            return "камера за меткой"
         if cam_z > self.limits.max_camera_height_m or cam_z < -0.5:
             return "невозможная высота камеры"
         return None
@@ -118,14 +122,14 @@ class PoseEstimator:
             if not ok:
                 rejected.append((d.tag_id, "PnP не решён"))
                 continue
-            T_w_m = marker_pose_world(self.frame, m.x, m.y, m.z_m, m.yaw_deg, m.pitch_deg, m.roll_deg)
+            T_w_m = marker_pose_world(self.frame, m.x, m.y, m.z_m, m.yaw_deg, m.pitch_deg, m.roll_deg, m.mount)
             best = None
             for rv, tv in zip(rvecs, tvecs):
                 err = self._reproj(obj, d.corners, rv, tv)
                 R, _ = cv2.Rodrigues(rv)
                 T_c_m = make_T(R, tv.reshape(3))
                 T_w_c = T_w_m @ inv_T(T_c_m)
-                why = self._plausible(T_w_c, m.z_m)
+                why = self._plausible(T_w_c, m, T_w_m)
                 dist = float(np.linalg.norm(tv))
                 if why or not (self.limits.min_distance_m <= dist <= self.limits.max_distance_m):
                     continue

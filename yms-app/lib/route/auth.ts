@@ -33,6 +33,7 @@ export const ROUTE_PERMISSIONS = [
   { code: "route.position.manual", name: "Route: ручная позиция погрузчика" },
   { code: "route.map.write", name: "Route: редактор карты и меток" },
   { code: "route.position.write", name: "Route: запись позиции (сервис позиционирования)" },
+  { code: "route.mode.write", name: "Forklift: режим кары REAL / SIMULATION" },
 ] as const
 
 export type RoutePermission = (typeof ROUTE_PERMISSIONS)[number]["code"]
@@ -41,7 +42,7 @@ const ALL = "*"
 const GRANTS: Record<string, string[]> = {
   admin: [ALL],
   warehouse_manager: [ALL],
-  route_admin: ["route.read", "route.map.write", "route.dispatch", "route.position.manual", "route.scan.manual"],
+  route_admin: ["route.read", "route.map.write", "route.dispatch", "route.position.manual", "route.scan.manual", "route.mode.write"],
   route_dispatcher: ["route.read", "route.dispatch", "route.position.manual", "route.scan.manual"],
   yms_dispatcher: ["route.read", "route.dispatch", "route.position.manual"],
   dispatcher: ["route.read", "route.dispatch", "route.position.manual"],

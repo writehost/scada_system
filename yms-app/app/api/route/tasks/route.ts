@@ -33,6 +33,7 @@ export async function POST(req: Request) {
         wmsRefId: str(b, "wmsRefId", 80) || null,
         note: str(b, "note", 240) || null,
         forkliftTypes: Array.isArray(b.forkliftTypes) ? (b.forkliftTypes as unknown[]).map(String) : null,
+        simulation: b.simulation === true,
       },
       actorLabel(ctx.actor)
     )

@@ -9,6 +9,8 @@ import { WmsHttpError } from "@/lib/wms/errors"
  *               достоверную точку со сниженной уверенностью;
  *   lost      — «Позиция не определена»;
  *   manual    — задана оператором вручную (этап 2 ТЗ), обозначается явно.
+ * Источник simulation принимается только для кары в режиме SIMULATION (и только он для такой кары,
+ * кроме ручной позиции), поэтому учебная позиция не может смешаться с реальной.
  */
 
 export type PositionState = "ok" | "degraded" | "lost" | "manual" | "none"
@@ -26,6 +28,7 @@ export type ForkliftPosition = {
   measuredAt: string
   receivedAt: string
   setBy: string | null
+  calibrationVersion: string | null
   state: PositionState
   ageS: number
   label: string
@@ -72,6 +75,7 @@ type Row = {
   measured_at: string
   received_at: string
   set_by: string | null
+  calibration_version: string | null
 }
 
 function mapRow(r: Row, now = Date.now()): ForkliftPosition {
@@ -90,6 +94,7 @@ function mapRow(r: Row, now = Date.now()): ForkliftPosition {
     measuredAt: r.measured_at,
     receivedAt: r.received_at,
     setBy: r.set_by,
+    calibrationVersion: r.calibration_version ?? null,
     state: st.state,
     ageS: Math.round(st.ageS * 10) / 10,
     label: STATE_LABEL[st.state],
@@ -98,7 +103,7 @@ function mapRow(r: Row, now = Date.now()): ForkliftPosition {
 
 const SELECT = `SELECT kara_id, x::text, y::text, z::text, heading_deg::text, quality::text, source, tag_ids,
   reproj_error_px::text, to_char(measured_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS measured_at,
-  received_at::text, set_by FROM route_positions`
+  received_at::text, set_by, calibration_version FROM route_positions`
 
 export async function getPosition(client: PoolClient, siteId: number, karaId: string): Promise<ForkliftPosition | null> {
   const r = await client.query<Row>(`${SELECT} WHERE site_id = $1 AND kara_id = $2`, [siteId, karaId])
@@ -120,9 +125,10 @@ export type PositionInput = {
   tagIds?: number[]
   reprojErrorPx?: number | null
   measuredAt: string
-  source: "apriltag" | "odometry" | "manual"
+  source: "apriltag" | "odometry" | "manual" | "simulation"
   state?: "ok" | "predicted" | "lost"
   setBy?: string | null
+  calibrationVersion?: string | null
 }
 
 export type IngestResult =
@@ -163,7 +169,8 @@ export async function ingestPosition(
     }
     q = 0
     lostEvent = !prev || prev.state !== "lost"
-  } else if (prev && input.source !== "manual" && (prev.state === "ok" || prev.state === "degraded")) {
+  } else if (prev && input.source !== "manual" && input.source !== "simulation" && (prev.state === "ok" || prev.state === "degraded")) {
+    // фильтр скачков — против сбоев камеры; учебную точку симулятор ставит намеренно
     const dt = Math.max(0.05, (t - Date.parse(prev.measuredAt)) / 1000)
     const distM = Math.hypot(x - prev.x, y - prev.y) * metersPerUnit
     if (distM > POSITION_LIMITS.maxSpeedMs * dt * 1.5 + 1.0) {
@@ -177,14 +184,16 @@ export async function ingestPosition(
   }
 
   await client.query(
-    `INSERT INTO route_positions (site_id, kara_id, x, y, z, heading_deg, quality, source, tag_ids, reproj_error_px, measured_at, received_at, set_by)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::int[],$10,$11, now(), $12)
+    `INSERT INTO route_positions (site_id, kara_id, x, y, z, heading_deg, quality, source, tag_ids, reproj_error_px, measured_at, received_at, set_by,
+       calibration_version)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::int[],$10,$11, now(), $12, $13)
      ON CONFLICT (site_id, kara_id) DO UPDATE SET
        x = EXCLUDED.x, y = EXCLUDED.y, z = EXCLUDED.z,
        heading_deg = COALESCE(EXCLUDED.heading_deg, route_positions.heading_deg),
        quality = EXCLUDED.quality, source = EXCLUDED.source, tag_ids = EXCLUDED.tag_ids,
        reproj_error_px = EXCLUDED.reproj_error_px, measured_at = EXCLUDED.measured_at,
-       received_at = now(), set_by = EXCLUDED.set_by`,
+       received_at = now(), set_by = EXCLUDED.set_by,
+       calibration_version = COALESCE(EXCLUDED.calibration_version, route_positions.calibration_version)`,
     [
       siteId,
       input.karaId,
@@ -198,6 +207,7 @@ export async function ingestPosition(
       input.reprojErrorPx ?? null,
       input.measuredAt,
       input.setBy ?? null,
+      input.calibrationVersion ?? null,
     ]
   )
   // журнал не чаще раза в секунду на погрузчик
@@ -212,4 +222,15 @@ export async function ingestPosition(
   )
   const cur = await getPosition(client, siteId, input.karaId)
   return { accepted: true, position: cur!, lostEvent }
+}
+
+/** Источники позиции, допустимые для режима кары. */
+export function sourceAllowed(mode: "REAL" | "SIMULATION", source: string): boolean {
+  if (source === "manual") return true
+  return mode === "SIMULATION" ? source === "simulation" : source === "apriltag" || source === "odometry"
+}
+
+/** Сбросить позицию при смене режима: учебная и реальная точки не должны продолжать друг друга. */
+export async function clearPosition(client: PoolClient, siteId: number, karaId: string) {
+  await client.query(`DELETE FROM route_positions WHERE site_id = $1 AND kara_id = $2`, [siteId, karaId])
 }

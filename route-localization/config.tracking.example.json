@@ -1,0 +1,33 @@
+{
+  "serverUrl": "https://yms.scadasystem.io",
+  "deviceToken": "rdev_… (выпускается в /route/editor → Устройства)",
+  "siteCode": "skeet",
+  "karaId": "<id кары из WMS>",
+  "source": "apriltag-tracking",
+  "tracking": {
+    "path": "../apriltag-tracking",
+    "ip": "169.254.19.203",
+    "exposureUs": 2000,
+    "families": "tag16h5",
+    "minMargin": 15,
+    "mvsPath": null,
+    "calibrationFile": "../apriltag-tracking/calibration.json",
+    "accuracyReport": "../apriltag-tracking/accuracy_report.csv"
+  },
+  "cameraToForklift": {
+    "look": "forward",
+    "x": 0.0,
+    "y": 0.0,
+    "z": 0.0,
+    "yawDeg": 0.0,
+    "pitchDeg": 0.0,
+    "rollDeg": 0.0,
+    "measured": false,
+    "_comment": "ИЗМЕРИТЬ на погрузчике: x вперёд, y влево, z вверх от опорной точки (центр передней оси на полу), метры; затем measured=true"
+  },
+  "maxHz": 4,
+  "lostAfterS": 3,
+  "predictMaxS": 1.5,
+  "maxReprojPx": 2.0,
+  "refreshConfigS": 300
+}

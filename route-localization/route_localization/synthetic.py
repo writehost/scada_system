@@ -38,7 +38,7 @@ def render(frame: PlanFrame, markers: list[MarkerInfo], calib: Calibration, x: f
     rvec, _ = cv2.Rodrigues(T_c_w[:3, :3])
     tvec = T_c_w[:3, 3]
     for m in markers:
-        T_w_m = marker_pose_world(frame, m.x, m.y, m.z_m, m.yaw_deg, m.pitch_deg, m.roll_deg)
+        T_w_m = marker_pose_world(frame, m.x, m.y, m.z_m, m.yaw_deg, m.pitch_deg, m.roll_deg, m.mount)
         # метка с белой рамкой (1/4 размера с каждой стороны)
         outer = m.size_m * 1.5
         world = (T_w_m[:3, :3] @ tag_corners_local(outer).T).T + T_w_m[:3, 3]

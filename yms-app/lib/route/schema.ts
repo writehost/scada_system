@@ -134,9 +134,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS route_tasks_wms_ref_uidx
 CREATE UNIQUE INDEX IF NOT EXISTS route_tasks_one_active_per_kara_uidx
   ON route_tasks (site_id, kara_id)
   WHERE kara_id IS NOT NULL AND status IN ('ACCEPTED','EN_ROUTE_PICKUP','AT_PICKUP','LOAD_CONFIRMED','EN_ROUTE_DROPOFF','AT_DROPOFF');
-CREATE UNIQUE INDEX IF NOT EXISTS route_tasks_one_open_per_hu_uidx
+ALTER TABLE route_tasks ADD COLUMN IF NOT EXISTS simulation BOOLEAN NOT NULL DEFAULT FALSE;
+DROP INDEX IF EXISTS route_tasks_one_open_per_hu_uidx;
+-- одно открытое задание по палете — отдельно для реальных заданий и для симуляции:
+-- учебное задание не блокирует реальную работу с палетой
+CREATE UNIQUE INDEX IF NOT EXISTS route_tasks_one_open_per_hu_real_uidx
   ON route_tasks (site_id, hu_code)
-  WHERE status NOT IN ('COMPLETED','CANCELLED');
+  WHERE status NOT IN ('COMPLETED','CANCELLED') AND NOT simulation;
+CREATE UNIQUE INDEX IF NOT EXISTS route_tasks_one_open_per_hu_sim_uidx
+  ON route_tasks (site_id, hu_code)
+  WHERE status NOT IN ('COMPLETED','CANCELLED') AND simulation;
 CREATE INDEX IF NOT EXISTS route_tasks_queue_idx ON route_tasks (site_id, status, priority DESC, created_at);
 
 CREATE TABLE IF NOT EXISTS route_task_events (
@@ -299,6 +306,14 @@ CREATE TABLE IF NOT EXISTS route_events (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS route_events_site_idx ON route_events (site_id, event_id);
+
+-- SCADA System Forklift: режим кары, крепление меток, версия калибровки, состояние камеры
+ALTER TABLE route_forklift_profiles ADD COLUMN IF NOT EXISTS op_mode TEXT NOT NULL DEFAULT 'REAL';
+ALTER TABLE route_apriltag_markers ADD COLUMN IF NOT EXISTS mount TEXT NOT NULL DEFAULT 'ceiling';
+ALTER TABLE route_apriltag_markers ADD COLUMN IF NOT EXISTS binding_version INT NOT NULL DEFAULT 1;
+ALTER TABLE route_positions ADD COLUMN IF NOT EXISTS calibration_version TEXT;
+ALTER TABLE route_devices ADD COLUMN IF NOT EXISTS status JSONB;
+ALTER TABLE route_devices ADD COLUMN IF NOT EXISTS status_at TIMESTAMPTZ;
 
 CREATE TABLE IF NOT EXISTS route_settings (
   site_id INT NOT NULL REFERENCES wms_sites(site_id) ON DELETE CASCADE,

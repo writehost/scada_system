@@ -46,7 +46,11 @@ class RouteClient:
     def fetch_config(self, camera_serial: str) -> dict:
         return self._req("GET", f"/api/route/localizer/config?cameraSerial={urllib.request.quote(camera_serial)}")
 
-    def send(self, out: TrackOutput, tag_ids: list[int] | None = None, reproj: float | None = None) -> dict:
+    def send_status(self, body: dict) -> dict:
+        """Состояние камеры и локализации (диагностика для водителя и администратора)."""
+        return self._req("POST", f"/api/route/localizer/status?karaId={urllib.request.quote(self.kara)}", body)
+
+    def send(self, out: TrackOutput, tag_ids: list[int] | None = None, reproj: float | None = None, calibration_version: str | None = None) -> dict:
         body = {
             "x": round(out.x, 2),
             "y": round(out.y, 2),
@@ -58,6 +62,8 @@ class RouteClient:
             "source": "odometry" if out.state == "predicted" else "apriltag",
             "state": out.state,
         }
+        if calibration_version:
+            body["calibrationVersion"] = calibration_version
         return self._req("POST", f"/api/route/forklifts/{self.kara}/position", body)
 
 
@@ -74,13 +80,13 @@ class Publisher:
         self._t = threading.Thread(target=self._run, daemon=True)
         self._t.start()
 
-    def offer(self, out: TrackOutput, tag_ids: list[int] | None = None, reproj: float | None = None):
+    def offer(self, out: TrackOutput, tag_ids: list[int] | None = None, reproj: float | None = None, calibration_version: str | None = None):
         """В очереди только последнее измерение; частоту ограничивает поток отправки."""
         try:
             self.q.get_nowait()
         except queue.Empty:
             pass
-        self.q.put_nowait((out, tag_ids, reproj))
+        self.q.put_nowait((out, tag_ids, reproj, calibration_version))
 
     def _run(self):
         while not self._stop.is_set():

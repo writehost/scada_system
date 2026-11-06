@@ -35,6 +35,10 @@ export type Marker = {
   rollDeg: number
   sizeM: number
   mountHeightM: number | null
+  /** ceiling — на потолке лицом вниз (yawDeg — ось +x метки); wall — на стене/стойке (yawDeg — куда смотрит метка) */
+  mount: "ceiling" | "wall"
+  /** Версия привязки: растёт при каждом изменении координат/ориентации метки */
+  bindingVersion: number
   active: boolean
   calibratedAt: string | null
   note: string | null
@@ -44,11 +48,18 @@ export async function listMarkers(client: PoolClient, siteId: number): Promise<M
   const r = await client.query<Marker>(
     `SELECT family, tag_id AS "tagId", zone, object_code AS "objectCode", x::float AS x, y::float AS y, z_m::float AS "zM",
             yaw_deg::float AS "yawDeg", pitch_deg::float AS "pitchDeg", roll_deg::float AS "rollDeg", size_m::float AS "sizeM",
-            mount_height_m::float AS "mountHeightM", active, calibrated_at::text AS "calibratedAt", note
+            mount_height_m::float AS "mountHeightM", mount, binding_version AS "bindingVersion", active,
+            calibrated_at::text AS "calibratedAt", note
      FROM route_apriltag_markers WHERE site_id = $1 ORDER BY family, tag_id`,
     [siteId]
   )
   return r.rows
+}
+
+function mountOf(v: unknown): "ceiling" | "wall" {
+  if (v === undefined || v === null || v === "" || v === "ceiling") return "ceiling"
+  if (v === "wall") return "wall"
+  throw new WmsHttpError(400, "mount: ceiling или wall", "bad_mount")
 }
 
 export function validateMarker(raw: Record<string, unknown>): Marker {
@@ -80,6 +91,8 @@ export function validateMarker(raw: Record<string, unknown>): Marker {
     rollDeg: n("rollDeg", 0)!,
     sizeM,
     mountHeightM: n("mountHeightM"),
+    mount: mountOf(raw.mount),
+    bindingVersion: 1,
     active: raw.active !== false,
     calibratedAt: raw.calibratedAt ? String(raw.calibratedAt) : null,
     note: raw.note ? String(raw.note).slice(0, 240) : null,
@@ -95,14 +108,19 @@ export async function upsertMarkers(client: PoolClient, siteId: number, list: un
     if (m.family === "tag16h5") warnings.push(`метка ${m.tagId}: tag16h5 — тестовое семейство, для склада нужен обоснованный выбор`)
     await client.query(
       `INSERT INTO route_apriltag_markers (site_id, family, tag_id, zone, object_code, x, y, z_m, yaw_deg, pitch_deg, roll_deg, size_m,
-         mount_height_m, active, calibrated_at, note, updated_by)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::timestamptz,$16,$17)
+         mount_height_m, active, calibrated_at, note, updated_by, mount)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::timestamptz,$16,$17,$18)
        ON CONFLICT (site_id, family, tag_id) DO UPDATE SET zone = EXCLUDED.zone, object_code = EXCLUDED.object_code,
          x = EXCLUDED.x, y = EXCLUDED.y, z_m = EXCLUDED.z_m, yaw_deg = EXCLUDED.yaw_deg, pitch_deg = EXCLUDED.pitch_deg,
          roll_deg = EXCLUDED.roll_deg, size_m = EXCLUDED.size_m, mount_height_m = EXCLUDED.mount_height_m,
-         active = EXCLUDED.active, calibrated_at = EXCLUDED.calibrated_at, note = EXCLUDED.note,
+         active = EXCLUDED.active, calibrated_at = EXCLUDED.calibrated_at, note = EXCLUDED.note, mount = EXCLUDED.mount,
+         binding_version = route_apriltag_markers.binding_version
+           + CASE WHEN (route_apriltag_markers.x, route_apriltag_markers.y, route_apriltag_markers.z_m, route_apriltag_markers.yaw_deg,
+                        route_apriltag_markers.pitch_deg, route_apriltag_markers.roll_deg, route_apriltag_markers.size_m, route_apriltag_markers.mount)
+                     IS DISTINCT FROM (EXCLUDED.x, EXCLUDED.y, EXCLUDED.z_m, EXCLUDED.yaw_deg, EXCLUDED.pitch_deg, EXCLUDED.roll_deg,
+                        EXCLUDED.size_m, EXCLUDED.mount) THEN 1 ELSE 0 END,
          updated_by = EXCLUDED.updated_by, updated_at = now()`,
-      [siteId, m.family, m.tagId, m.zone, m.objectCode, m.x, m.y, m.zM, m.yawDeg, m.pitchDeg, m.rollDeg, m.sizeM, m.mountHeightM, m.active, m.calibratedAt, m.note, actor]
+      [siteId, m.family, m.tagId, m.zone, m.objectCode, m.x, m.y, m.zM, m.yawDeg, m.pitchDeg, m.rollDeg, m.sizeM, m.mountHeightM, m.active, m.calibratedAt, m.note, actor, m.mount]
     )
     saved += 1
   }

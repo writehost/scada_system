@@ -1,4 +1,4 @@
-/* SCADA System Route — индустриальный навигатор: графит, контрастная карта, акценты только по делу. */
+/* SCADA System Forklift (Route) — индустриальный навигатор: графит, контрастная карта, акценты только по делу. */
 :root {
   --rt-bg: #15181b;
   --rt-panel: #1f2428;
@@ -13,6 +13,7 @@
   --rt-ok: #4cd97b;
   --rt-pick: #4aa8ff;
   --rt-drop: #ff9f43;
+  --rt-sim: #c084fc;
   --rt-font: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
 }
 
@@ -101,6 +102,43 @@
 }
 .rt-chip.info {
   color: var(--rt-text);
+}
+/* режим работы виден всегда: REAL — спокойный, SIMULATION — заметный фиолетовый */
+.rt-chip.real {
+  color: var(--rt-text);
+  border-color: var(--rt-line);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.rt-chip.sim {
+  color: #1d0b33;
+  background: var(--rt-sim);
+  border-color: var(--rt-sim);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.rt-simbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 14px;
+  background: repeating-linear-gradient(135deg, rgba(192, 132, 252, 0.92) 0 18px, rgba(168, 102, 240, 0.92) 18px 36px);
+  color: #1d0b33;
+  font-size: clamp(13px, 1.9vh, 17px);
+  z-index: 6;
+}
+.rt-simbar .rt-btn {
+  margin-left: auto;
+  min-height: 40px;
+  padding: 0 16px;
+  background: #1d0b33;
+  color: #f3e8ff;
+  border-color: #1d0b33;
 }
 
 .rt-mapwrap {
@@ -628,5 +666,60 @@
   }
   .rt-btn.primary {
     min-height: 64px;
+  }
+}
+
+/* SCADA System Forklift: метки режима в диспетчерской */
+.rt-badge.sim {
+  background: var(--rt-sim);
+  color: #1d0b33;
+  border-color: var(--rt-sim);
+  font-weight: 800;
+}
+.rt-field.rt-check {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 8px;
+}
+.rt-field.rt-check input {
+  width: auto;
+  margin-top: 3px;
+}
+
+/* верхняя панель водителя: режим, позиция и камера помещаются и на 800×480 */
+.rt-top .rt-chip .txt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.rt-top .rt-chip {
+  min-width: 0;
+}
+@media (max-width: 1180px) {
+  .rt-top .rt-cam .txt {
+    display: none;
+  }
+  .rt-top .rt-pos .txt {
+    max-width: 24ch;
+  }
+}
+@media (max-width: 860px) {
+  .rt-driver .rt-brand {
+    display: none;
+  }
+  .rt-top {
+    gap: 8px;
+  }
+  .rt-top .rt-pos .txt {
+    max-width: 16ch;
+  }
+}
+@media (max-width: 1440px) {
+  .rt-driver .rt-top .rt-who {
+    display: none;
+  }
+  .rt-top .rt-cam .txt,
+  .rt-top .rt-pos .txt {
+    max-width: 20ch;
   }
 }

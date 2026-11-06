@@ -57,8 +57,16 @@ export async function driverState(client: PoolClient, siteId: number, actor: Rou
     user: { login: actor.login, fio: actor.fio },
     session,
     forklift: forklift
-      ? { id: forklift.id, name: forklift.name, boardNumber: forklift.boardNumber, type: forklift.forkliftType, autoAssign: forklift.autoAssign }
-      : { id: session.karaId, name: session.karaName || session.karaId, boardNumber: null, type: null, autoAssign: false },
+      ? {
+          id: forklift.id,
+          name: forklift.name,
+          boardNumber: forklift.boardNumber,
+          type: forklift.forkliftType,
+          autoAssign: forklift.autoAssign,
+          opMode: forklift.opMode,
+          localizer: forklift.localizer,
+        }
+      : { id: session.karaId, name: session.karaName || session.karaId, boardNumber: null, type: null, autoAssign: false, opMode: "REAL", localizer: null },
     task: view,
     next,
     position,

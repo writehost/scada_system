@@ -7,7 +7,22 @@ import { MapView, type MapHit, type MapMarker } from "@/components/route/map-vie
 
 type Version = { mapId: string; version: number; status: string; title: string | null; revision: number; createdBy: string | null; publishedAt: string | null; updatedAt: string }
 type Change = { changeId: string; version: number; action: string; summary: string; actor: string; at: string }
-type Marker = { family: string; tagId: number; x: number; y: number; sizeM: number; zone: string | null; active: boolean; mountHeightM: number | null; yawDeg: number; calibratedAt: string | null; note: string | null }
+type Marker = {
+  family: string
+  tagId: number
+  x: number
+  y: number
+  zM: number
+  sizeM: number
+  zone: string | null
+  active: boolean
+  mountHeightM: number | null
+  yawDeg: number
+  mount?: "ceiling" | "wall"
+  bindingVersion?: number
+  calibratedAt: string | null
+  note: string | null
+}
 type Tool = "select" | "node" | "edge" | "delete" | "area" | "point" | "address" | "tag"
 
 let seq = Date.now() % 100000
@@ -152,9 +167,18 @@ export function RouteEditor() {
       case "tag": {
         const fam = window.prompt("Семейство AprilTag", markers[0]?.family || "tag36h11")?.trim()
         const id = Number(window.prompt("ID метки"))
-        const size = Number(window.prompt("Размер метки, м", "0.2"))
-        if (!fam || !Number.isInteger(id)) return
-        void api("PUT", "/api/route/apriltags", { markers: [{ family: fam, tagId: id, x: w.x, y: w.y, sizeM: size }] })
+        const size = Number(window.prompt("Размер метки по внешнему краю чёрной рамки, м (измерить линейкой)", "0.2"))
+        const mountRaw = window.prompt("Крепление: потолок или стена", "стена")?.trim().toLowerCase()
+        const mount = mountRaw?.startsWith("п") || mountRaw === "ceiling" ? "ceiling" : "wall"
+        const zM = Number(window.prompt("Высота центра метки от пола, м (измерить рулеткой)", ""))
+        const yawDeg = Number(
+          window.prompt(mount === "wall" ? "Куда смотрит метка, курс плана в градусах (0 — вправо, 90 — вниз по плану)" : "Направление оси +x метки, курс плана в градусах", "0")
+        )
+        if (!fam || !Number.isInteger(id) || !Number.isFinite(zM) || !Number.isFinite(yawDeg)) {
+          setMsg("Метка не сохранена: нужны семейство, ID, измеренная высота и курс")
+          return
+        }
+        void api("PUT", "/api/route/apriltags", { markers: [{ family: fam, tagId: id, x: w.x, y: w.y, zM, yawDeg, mount, sizeM: size }] })
           .then(() => loadTags())
           .catch((e: Error) => setMsg(e.message))
         break
@@ -225,7 +249,7 @@ export function RouteEditor() {
       <div className="rt-desk">
         <header className="rt-top">
           <div className="rt-brand">
-            SCADA System Route<small>РЕДАКТОР ТОПОЛОГИИ</small>
+            SCADA System Forklift<small>КАРТА И МЕТКИ</small>
           </div>
           <a className="rt-chip info" href="/route/dispatch">
             Диспетчерская
@@ -529,7 +553,7 @@ function TagsPane({ markers, reload, setMsg }: { markers: Marker[]; reload: () =
             <span className={`rt-badge ${m.active ? "ok" : ""}`}>{m.active ? "активна" : "выкл"}</span>
           </div>
           <div className="m">
-            x {m.x}, y {m.y} · {m.sizeM} м · высота {m.mountHeightM ?? "—"} м · калибровка {m.calibratedAt ? new Date(m.calibratedAt).toLocaleDateString("ru-RU") : "нет"}
+            {m.mount === "wall" ? "стена" : "потолок"} · x {m.x}, y {m.y} · центр {m.zM} м · курс {m.yawDeg}° · {m.sizeM} м · привязка v{m.bindingVersion ?? 1} · калибровка {m.calibratedAt ? new Date(m.calibratedAt).toLocaleDateString("ru-RU") : "нет"}
             {m.note ? ` · ${m.note}` : ""}
           </div>
           <button

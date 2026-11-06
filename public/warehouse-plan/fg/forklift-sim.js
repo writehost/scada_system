@@ -244,9 +244,16 @@ function finishTripStop(f) {
 }
 
 function completeMission(missionId) {
+  // PATCH миссии требует входа в WMS: cookie сессии или Bearer из localStorage (как lib/wms-api.ts)
+  const headers = { "Content-Type": "application/json" }
+  try {
+    const token = (localStorage.getItem("wms_access_token") || "").trim()
+    if (token) headers.Authorization = `Bearer ${token}`
+  } catch {}
   fetch(`${MISSIONS_API}/${encodeURIComponent(missionId)}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    headers,
     body: JSON.stringify({ siteCode, action: "complete" }),
   }).catch(() => {})
 }

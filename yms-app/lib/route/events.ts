@@ -26,6 +26,9 @@ export const ROUTE_TOPICS = [
   "exception.resolved",
   "session.started",
   "session.ended",
+  "forklift.mode.changed",
+  "simulation.movement.done",
+  "localizer.status",
 ] as const
 
 export type RouteTopic = (typeof ROUTE_TOPICS)[number]

@@ -3,7 +3,7 @@
  * Запуск: tsx --tsconfig tests/route/tsconfig.yms.json --test tests/route/unit.test.ts
  */
 import assert from "node:assert/strict"
-import { test } from "node:test"
+import { describe, test } from "node:test"
 import draft from "@/data/route/fg-map-draft.json"
 import { classifyScan, gs1CheckDigit, parseAddressScan, parseSscc, palletKey } from "@/lib/route/codes"
 import { fefoEligible, rankCandidates, type Candidate } from "@/lib/route/dispatch"
@@ -212,4 +212,79 @@ test("позиция: свежая — ок, старая — неточная, 
   assert.equal(positionState({ source: "apriltag", quality: 0.9, measuredAt: "2026-11-03T09:59:50Z" }, now).state, "lost")
   assert.equal(positionState({ source: "odometry", quality: 0.4, measuredAt: "2026-11-03T10:00:09.900Z" }, now).state, "degraded")
   assert.equal(positionState({ source: "manual", quality: 1, measuredAt: "2026-11-03T08:00:00Z" }, now).state, "manual")
+})
+
+/* ---------- kara-commands (коллекция «Кара ГП») ---------- */
+import { fetchKaraCatalog, karaCommandsConfig, karaGoto, parseCatalog, reconcileCatalog } from "../../lib/route/kara-commands"
+import { sourceAllowed } from "../../lib/route/positions"
+
+describe("kara-commands", () => {
+  const cfg = { baseUrl: "https://wms.example", token: "wmsu_test", timeoutMs: 1000, gotoInSimulation: true }
+  type Call = { url: string; init: RequestInit }
+  function fakeFetch(status: number, body: unknown, calls: Call[]) {
+    return (async (url: string, init: RequestInit) => {
+      calls.push({ url, init })
+      return new Response(JSON.stringify(body), { status })
+    }) as unknown as typeof fetch
+  }
+
+  test("конфигурация только из окружения сервера", () => {
+    assert.equal(karaCommandsConfig({}), null)
+    assert.equal(karaCommandsConfig({ WMS_KARA_API_URL: "https://wms.example/" }), null, "без токена не настроено")
+    const c = karaCommandsConfig({ WMS_KARA_API_URL: "https://wms.example/", WMS_KARA_API_TOKEN: "wmsu_x" })!
+    assert.equal(c.baseUrl, "https://wms.example")
+    assert.equal(c.gotoInSimulation, false, "goto по умолчанию выключен")
+  })
+
+  test("каталог: Bearer, siteCode, разбор karas/tags/items", async () => {
+    const calls: Call[] = []
+    const f = fakeFetch(200, { karas: [{ id: "k1", name: "Кара 1" }], tags: [{ tagId: 3, rows: ["FG-A-1"] }, { tagId: 4 }], items: [{ itemCode: "I1" }] }, calls)
+    const r = await fetchKaraCatalog("skeet", cfg, f)
+    assert.ok(r.ok)
+    if (!r.ok) return
+    assert.equal(calls[0].url, "https://wms.example/api/wms/warehouse/finished-goods/kara-commands?siteCode=skeet")
+    assert.equal((calls[0].init.headers as Record<string, string>).authorization, "Bearer wmsu_test")
+    assert.deepEqual(r.data.tags.map((t) => [t.tagId, t.rows]), [[3, ["FG-A-1"]], [4, []]])
+    const rec = reconcileCatalog(r.data, ["k1", "kara-9"], [3, 7])
+    assert.deepEqual(rec.karasMissingInWms, ["kara-9"])
+    assert.deepEqual(rec.tagsWithoutRows, [4])
+    assert.deepEqual(rec.tagsOnlyInWms, [4])
+    assert.deepEqual(rec.tagsMissingInWms, [7])
+  })
+
+  test("ошибки WMS различаются: отказ и недоступность", async () => {
+    const r401 = await fetchKaraCatalog("skeet", cfg, fakeFetch(401, { error: "bad token" }, []))
+    assert.ok(!r401.ok && r401.kind === "rejected" && r401.message === "bad token")
+    const r502 = await fetchKaraCatalog("skeet", cfg, fakeFetch(502, {}, []))
+    assert.ok(!r502.ok && r502.kind === "unavailable")
+    const none = await fetchKaraCatalog("skeet", null, fakeFetch(200, {}, []))
+    assert.ok(!none.ok && none.kind === "not_configured")
+  })
+
+  test("goto — только в SIMULATION и только если явно включён; точное тело команды", async () => {
+    const calls: Call[] = []
+    const f = fakeFetch(200, { ok: true }, calls)
+    const real = await karaGoto("skeet", "k1", 3, { mode: "REAL" }, cfg, f)
+    assert.ok(!real.ok)
+    assert.equal(calls.length, 0, "в REAL запрос не отправляется")
+    const off = await karaGoto("skeet", "k1", 3, { mode: "SIMULATION" }, { ...cfg, gotoInSimulation: false }, f)
+    assert.ok(!off.ok && off.kind === "not_configured")
+    const ok = await karaGoto("skeet", "k1", 3, { mode: "SIMULATION" }, cfg, f)
+    assert.ok(ok.ok)
+    assert.deepEqual(JSON.parse(String(calls[0].init.body)), { siteCode: "skeet", command: "goto", karaId: "k1", tagId: 3 })
+  })
+
+  test("parseCatalog терпит пустой и битый ответ", () => {
+    assert.deepEqual(parseCatalog(null), { karas: [], tags: [], items: [] })
+    assert.equal(parseCatalog({ tags: [{ tagId: "x" }, { tagId: 2 }] }).tags.length, 1)
+  })
+})
+
+describe("источник позиции и режим кары", () => {
+  test("REAL: камера и одометрия; SIMULATION: только симулятор; ручная — всегда", () => {
+    assert.ok(sourceAllowed("REAL", "apriltag") && sourceAllowed("REAL", "odometry") && sourceAllowed("REAL", "manual"))
+    assert.ok(!sourceAllowed("REAL", "simulation"))
+    assert.ok(sourceAllowed("SIMULATION", "simulation") && sourceAllowed("SIMULATION", "manual"))
+    assert.ok(!sourceAllowed("SIMULATION", "apriltag") && !sourceAllowed("SIMULATION", "odometry"))
+  })
 })

@@ -7,6 +7,13 @@
 Корпус погрузчика: x — вперёд, y — влево, z — вверх.
 Камера (OpenCV): x — вправо по кадру, y — вниз по кадру, z — оптическая ось.
 Метка (OpenCV IPPE_SQUARE): x — вправо, y — вверх по метке, z — из метки к наблюдателю.
+
+Крепление метки (mount):
+  ceiling — на потолке лицом вниз; yawDeg — направление оси +x метки (курс плана).
+  wall    — на стене/стойке вертикально, верх метки вверх; yawDeg — куда метка «смотрит» (нормаль, курс плана).
+Крепление камеры (cameraToForklift.look):
+  up      — смотрит вверх, верх кадра — вперёд по ходу (для потолочных меток);
+  forward — смотрит вперёд по ходу, верх кадра — вверх (для меток на стенах и стойках).
 """
 from __future__ import annotations
 
@@ -64,23 +71,38 @@ def world_yaw_to_plan_heading(yaw: float) -> float:
     return (h + 180.0) % 360.0 - 180.0
 
 
-def marker_pose_world(frame: PlanFrame, x: float, y: float, z_m: float, yaw_deg: float, pitch_deg: float = 0.0, roll_deg: float = 0.0) -> np.ndarray:
-    """Поза метки на потолке, лицом вниз. yaw_deg — направление оси +x метки в терминах курса плана."""
+def marker_pose_world(frame: PlanFrame, x: float, y: float, z_m: float, yaw_deg: float, pitch_deg: float = 0.0, roll_deg: float = 0.0,
+                      mount: str = "ceiling") -> np.ndarray:
+    """Поза метки в мире. pitch/roll — малые поправки к базовой ориентации (перекос при монтаже)."""
     psi = plan_heading_to_world_yaw(yaw_deg)
-    x_axis = np.array([math.cos(psi), math.sin(psi), 0.0])
-    z_axis = np.array([0.0, 0.0, -1.0])
-    y_axis = np.cross(z_axis, x_axis)
+    if mount == "wall":
+        z_axis = np.array([math.cos(psi), math.sin(psi), 0.0])  # нормаль — куда смотрит метка
+        y_axis = np.array([0.0, 0.0, 1.0])  # верх метки — вверх
+        x_axis = np.cross(y_axis, z_axis)
+    elif mount == "ceiling":
+        x_axis = np.array([math.cos(psi), math.sin(psi), 0.0])
+        z_axis = np.array([0.0, 0.0, -1.0])
+        y_axis = np.cross(z_axis, x_axis)
+    else:
+        raise ValueError(f"неизвестное крепление метки: {mount}")
     R = np.column_stack([x_axis, y_axis, z_axis])
     R = R @ rot_x(math.radians(roll_deg)) @ rot_y(math.radians(pitch_deg))
     return make_T(R, frame.plan_to_world(x, y, z_m))
 
 
 def camera_in_body(extr: dict) -> np.ndarray:
-    """Положение камеры на корпусе. Базовая ориентация: камера смотрит вверх, верх кадра — вперёд по ходу.
+    """Положение камеры на корпусе.
 
-    extr: {"x": м, "y": м, "z": м, "yawDeg": .., "pitchDeg": .., "rollDeg": ..} — смещения от базовой.
+    extr: {"look": "up"|"forward", "x": м, "y": м, "z": м, "yawDeg": .., "pitchDeg": .., "rollDeg": ..};
+    x/y/z — от опорной точки погрузчика (корпус: x вперёд, y влево, z вверх), углы — поправки к базовой ориентации.
     """
-    base = np.column_stack([[0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 1.0]])
+    look = str(extr.get("look", "up"))
+    if look == "up":  # исходная схема: x кадра = +y корпуса, y кадра = −x корпуса, ось — вверх
+        base = np.column_stack([[0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 1.0]])
+    elif look == "forward":  # x кадра — вправо (−y корпуса), y кадра — вниз (−z), оптическая ось — вперёд (+x)
+        base = np.column_stack([[0.0, -1.0, 0.0], [0.0, 0.0, -1.0], [1.0, 0.0, 0.0]])
+    else:
+        raise ValueError(f"cameraToForklift.look: up или forward, получено {look}")
     R = (
         rot_z(math.radians(float(extr.get("yawDeg", 0.0))))
         @ rot_y(math.radians(float(extr.get("pitchDeg", 0.0))))

@@ -42,7 +42,16 @@ def main(argv: list[str] | None = None) -> int:
     if a.cmd == "run":
         from .service import LocalizationService, ServiceConfig
 
-        LocalizationService(ServiceConfig.load(a.config)).run()
+        cfg = ServiceConfig.load(a.config)
+        if cfg.source == "apriltag-tracking":
+            from .tracking_bridge import TrackingBridgeService
+
+            if not cfg.tracking or not cfg.tracking.get("calibrationFile"):
+                print("ОШИБКА: для source=apriltag-tracking нужен раздел tracking с calibrationFile", file=sys.stderr)
+                return 2
+            TrackingBridgeService(cfg, cfg.tracking, cfg.camera_to_forklift or {}).run()
+            return 0
+        LocalizationService(cfg).run()
         return 0
     if a.cmd == "check":
         import cv2

@@ -1,5 +1,7 @@
 # SCADA System Route — навигационная панель водителя погрузчика
 
+> Продолжение: **SCADA System Forklift** — режимы REAL/SIMULATION, модуль apriltag-tracking, kara-commands: `docs/FORKLIFT.md`.
+
 Route встроен в существующий контур, а не стоит рядом с ним:
 
 | Компонент | Где в репозитории | Что делает |

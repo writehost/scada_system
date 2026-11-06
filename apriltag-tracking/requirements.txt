@@ -1,0 +1,6 @@
+numpy>=1.26
+opencv-python>=4.8
+pupil-apriltags>=1.0.4
+# для тестов
+pytest>=7
+# Hikrobot MVS SDK (MvCameraControl_class) ставится вместе с MVS, через pip не устанавливается.

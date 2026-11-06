@@ -23,7 +23,7 @@ import {
   type RouteTaskStatus,
   type RouteTaskType,
 } from "@/lib/route/state-machine"
-import { wmsGateway, type PalletCheck } from "@/lib/route/wms-gateway"
+import { wmsGateway, type MoveResult, type PalletCheck } from "@/lib/route/wms-gateway"
 
 /* ------------------------------------------------------------------ */
 /* Модель                                                              */
@@ -69,6 +69,8 @@ export type TaskRow = {
   loadedAt: string | null
   completedAt: string | null
   payload: Record<string, unknown>
+  /** Учебное задание SIMULATION: только для кары в режиме симуляции, складских транзакций не создаёт */
+  simulation: boolean
 }
 
 const TASK_COLS = `
@@ -83,7 +85,7 @@ const TASK_COLS = `
   t.blocked_reason AS "blockedReason", t.cancel_reason AS "cancelReason", t.note, t.created_by AS "createdBy",
   t.created_at::text AS "createdAt", t.updated_at::text AS "updatedAt", t.offered_at::text AS "offeredAt",
   t.accepted_at::text AS "acceptedAt", t.loaded_at::text AS "loadedAt", t.completed_at::text AS "completedAt",
-  COALESCE(t.payload, '{}'::jsonb) AS payload`
+  COALESCE(t.payload, '{}'::jsonb) AS payload, t.simulation`
 
 export async function loadTask(client: PoolClient, siteId: number, taskId: string, lock = false): Promise<TaskRow> {
   if (!/^\d+$/.test(taskId)) throw new WmsHttpError(400, "некорректный ID задания", "bad_task_id")
@@ -387,6 +389,8 @@ export type CreateTaskInput = {
   note?: string | null
   forkliftTypes?: string[] | null
   sourceIsStorage?: boolean | null
+  /** Задание симуляции (явно, только диспетчер). Не связывается с очередью WMS и не двигает палету в WMS. */
+  simulation?: boolean
 }
 
 async function nextTaskNo(client: PoolClient, siteId: number): Promise<string> {
@@ -418,6 +422,10 @@ export async function createTask(
   const dst = normalizeLocation(input.destCode)
   if (!huRaw || !src || !dst) throw new WmsHttpError(400, "нужны huCode, sourceCode, destCode", "fields_required")
   if (src === dst) throw new WmsHttpError(400, "место получения и назначения совпадают", "same_place")
+  const simulation = input.simulation === true
+  if (simulation && input.wmsRefId) {
+    throw new WmsHttpError(400, "Задание симуляции не может быть связано с заданием WMS", "simulation_wms_ref")
+  }
 
   if (input.wmsRefId) {
     const dup = await client.query<{ task_id: string }>(
@@ -449,8 +457,8 @@ export async function createTask(
   try {
     ins = await client.query<{ task_id: string }>(
       `INSERT INTO route_tasks (site_id, task_no, task_type, priority, status, source_code, source_node_id, dest_code, dest_node_id,
-         hu_code, item_code, item_name, lot_code, qty, expiry_at, wms_ref_kind, wms_ref_id, note, created_by, payload)
-       VALUES ($1,$2,$3,$4,'CREATED',$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19::jsonb)
+         hu_code, item_code, item_name, lot_code, qty, expiry_at, wms_ref_kind, wms_ref_id, note, created_by, payload, simulation)
+       VALUES ($1,$2,$3,$4,'CREATED',$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19::jsonb,$20)
        RETURNING task_id::text`,
       [
         siteId,
@@ -472,6 +480,7 @@ export async function createTask(
         input.note || null,
         actor,
         JSON.stringify(payload),
+        simulation,
       ]
     )
   } catch (error) {
@@ -487,7 +496,7 @@ export async function createTask(
     to: "CREATED",
     version: task.version,
     actor,
-    payload: { wmsRef: input.wmsRefId ?? null, source: src, dest: dst },
+    payload: { wmsRef: input.wmsRefId ?? null, source: src, dest: dst, simulation },
     wmsState: check,
   })
   task = await transition(client, task, "queue", { actor: "system" })
@@ -618,11 +627,11 @@ export async function activeTaskForKara(client: PoolClient, siteId: number, kara
   return r.rows[0] ?? null
 }
 
-async function queuedCandidates(client: PoolClient, siteId: number, lock: boolean, limit = 300): Promise<TaskRow[]> {
+async function queuedCandidates(client: PoolClient, siteId: number, lock: boolean, limit = 300, simulation = false): Promise<TaskRow[]> {
   const r = await client.query<TaskRow>(
-    `SELECT ${TASK_COLS} FROM route_tasks t WHERE t.site_id = $1 AND t.status = 'QUEUED'
+    `SELECT ${TASK_COLS} FROM route_tasks t WHERE t.site_id = $1 AND t.status = 'QUEUED' AND t.simulation = $3
      ORDER BY t.priority DESC, t.created_at LIMIT $2 ${lock ? "FOR UPDATE SKIP LOCKED" : ""}`,
-    [siteId, limit]
+    [siteId, limit, simulation]
   )
   return r.rows
 }
@@ -655,7 +664,10 @@ export async function bestCandidate(
   const blocked = await blockedEdgeSet(client, siteId)
   const pos = await getPosition(client, siteId, karaId)
   const at = usablePosition(pos)
-  const rows = (await queuedCandidates(client, siteId, opts.lock, opts.limit)).filter((t) => t.taskId !== opts.excludeTaskId)
+  // реальная кара получает только реальные задания, кара в симуляции — только учебные
+  const rows = (await queuedCandidates(client, siteId, opts.lock, opts.limit, kara.opMode === "SIMULATION")).filter(
+    (t) => t.taskId !== opts.excludeTaskId
+  )
   const byId = new Map(rows.map((t) => [t.taskId, t]))
   const constraints = { forkliftType: kara.forkliftType, widthM: kara.widthM, heightM: kara.heightM, blockedEdgeIds: blocked }
   const ranked = rankCandidates(rows.map(toCandidate), { karaId, forkliftType: kara.forkliftType }, (c) => {
@@ -714,6 +726,7 @@ export async function assignTask(
   }
   const kara = await getForklift(client, siteId, karaId)
   if (!kara) throw new WmsHttpError(404, "погрузчик не найден во флоте WMS", "kara_not_found")
+  assertModeMatches(t, kara.opMode, kara.name)
   const other = await activeTaskForKara(client, siteId, karaId)
   if (other && other.taskId !== t.taskId && (DRIVER_ACTIVE.has(other.status) || other.status === "OFFERED")) {
     throw new WmsHttpError(409, `${kara.name} занят заданием ${other.taskNo}`, "kara_busy")
@@ -732,6 +745,16 @@ export async function assignTask(
     patch: { kara_id: karaId, offered_at: true as unknown as string },
     payload: { auto: false },
   })
+}
+
+/** Реальное задание — только реальной каре, учебное — только каре в режиме симуляции. */
+export function assertModeMatches(t: Pick<TaskRow, "simulation" | "taskNo">, mode: "REAL" | "SIMULATION", karaName: string) {
+  if (t.simulation && mode !== "SIMULATION") {
+    throw new WmsHttpError(409, `${t.taskNo} — задание симуляции, а ${karaName} работает в реальном режиме`, "mode_mismatch")
+  }
+  if (!t.simulation && mode === "SIMULATION") {
+    throw new WmsHttpError(409, `${karaName} в режиме симуляции — реальное задание ${t.taskNo} ей назначить нельзя`, "mode_mismatch")
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -1110,7 +1133,21 @@ export async function confirmDropoff(
     throw error
   }
 
-  const result = await wmsGateway().movePallet({
+  // Симуляция: проверки скана палеты и адреса уже прошли (только чтение WMS), складское перемещение
+  // НЕ выполняется. Результат явно помечен как simulated и не выдаётся за подтверждение WMS.
+  const result: MoveResult = t.simulation
+    ? {
+        ok: true,
+        disposition: "simulated",
+        movementId: `SIM-${t.taskNo}`,
+        palletCode: t.huCode,
+        fromLocationCode: t.sourceCode,
+        toLocationCode: t.destCode,
+        movedCodes: 0,
+        ledger: "simulation: складская транзакция не создавалась",
+        at: new Date().toISOString(),
+      }
+    : await wmsGateway().movePallet({
     siteCode: cmd.siteCode,
     requestId: movementId,
     palletCode: t.huCode,
@@ -1158,7 +1195,7 @@ export async function confirmDropoff(
         { task: { taskId: t.taskId, version: t.version, status: t.status } }
       )
     }
-    await writeTask(client, t, { wms_movement_status: "confirmed", wms_movement_result: JSON.stringify(result) }, t.version)
+    await writeTask(client, t, { wms_movement_status: t.simulation ? "simulated" : "confirmed", wms_movement_result: JSON.stringify(result) }, t.version)
     t = await loadTask(client, cmd.siteId, cmd.taskId, true)
     t = await transition(client, t, "complete", {
       actor: actorLogin,
@@ -1166,7 +1203,7 @@ export async function confirmDropoff(
       patch: { completed_at: true as unknown as string },
       wmsState: result,
     })
-    await publish(client, cmd.siteId, "wms.movement.confirmed", {
+    await publish(client, cmd.siteId, t.simulation ? "simulation.movement.done" : "wms.movement.confirmed", {
       karaId: t.karaId,
       taskId: t.taskId,
       payload: { movementId: result.movementId, to: result.toLocationCode, disposition: result.disposition },

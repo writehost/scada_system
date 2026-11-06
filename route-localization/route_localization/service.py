@@ -35,6 +35,9 @@ class ServiceConfig:
     max_reproj_px: float
     odometry: dict | None
     refresh_config_s: float
+    source: str = "builtin"  # builtin — свой детектор; apriltag-tracking — модуль apriltag-tracking
+    tracking: dict | None = None
+    camera_to_forklift: dict | None = None
 
     @staticmethod
     def load(path: str) -> "ServiceConfig":
@@ -54,6 +57,9 @@ class ServiceConfig:
             max_reproj_px=float(c.get("maxReprojPx", 2.0)),
             odometry=c.get("odometry"),
             refresh_config_s=float(c.get("refreshConfigS", 300)),
+            source=str(c.get("source", "builtin")),
+            tracking=c.get("tracking"),
+            camera_to_forklift=c.get("cameraToForklift"),
         )
 
 
@@ -85,6 +91,7 @@ def markers_from_server(rows: list[dict]) -> list[MarkerInfo]:
                 pitch_deg=float(m.get("pitchDeg", 0.0)),
                 roll_deg=float(m.get("rollDeg", 0.0)),
                 active=bool(m.get("active", True)),
+                mount=str(m.get("mount") or "ceiling"),
             )
         )
     return out

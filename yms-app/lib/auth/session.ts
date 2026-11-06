@@ -50,7 +50,7 @@ async function hmacVerify(data: string, signature: string, secret: string): Prom
     false,
     ["verify"]
   )
-  return crypto.subtle.verify("HMAC", key, fromBase64Url(signature), encoder.encode(data))
+  return crypto.subtle.verify("HMAC", key, new Uint8Array(fromBase64Url(signature)), encoder.encode(data))
 }
 
 export async function createSessionToken(input: {

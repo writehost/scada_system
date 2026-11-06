@@ -440,6 +440,169 @@ describe("SCADA System Route — приёмка", { concurrency: false }, () => 
     assert.equal(complete.wmsState.disposition, "applied")
   })
 
+  /* ---------- SCADA System Forklift: режимы REAL / SIMULATION, сервис позиционирования ---------- */
+
+  test("Forklift: режим кары меняет только администратор, с причиной", async () => {
+    let r = await api("POST", "/api/route/forklifts/kara-2/mode", { as: "disp", body: { mode: "SIMULATION", reason: "обучение" } })
+    assert.equal(r.status, 403, "диспетчер режим не меняет")
+    r = await api("POST", "/api/route/forklifts/kara-2/mode", { as: "mapadmin", body: { mode: "SIMULATION" } })
+    assert.equal(r.status, 400)
+    assert.equal(r.body.code, "reason_required")
+    r = await api("POST", "/api/route/forklifts/kara-2/mode", { as: "mapadmin", body: { mode: "SIMULATION", reason: "обучение водителей" } })
+    assert.equal(r.status, 200, JSON.stringify(r.body))
+    assert.equal(r.body.forklift.opMode, "SIMULATION")
+    assert.equal(psql(`SELECT (payload->>'to') || '|' || (payload->>'reason') FROM route_events WHERE topic = 'forklift.mode.changed' ORDER BY event_id DESC LIMIT 1`), "SIMULATION|обучение водителей")
+    assert.equal(psql(`SELECT count(*) FROM route_positions WHERE kara_id = 'kara-2'`), "0", "позиция сброшена при смене режима")
+  })
+
+  test("Forklift: реальное задание нельзя назначить каре в симуляции, учебное — реальной каре", async () => {
+    const real = psql(`SELECT task_id FROM route_tasks WHERE hu_code = '${SSCC.P5}' AND NOT simulation AND status = 'QUEUED'`)
+    assert.ok(real, "реальное задание по P5 в очереди")
+    let r = await api("POST", `/api/route/tasks/${real}/dispatch`, { as: "disp", body: { action: "assign", karaId: "kara-2" } })
+    assert.equal(r.status, 409, JSON.stringify(r.body))
+    assert.equal(r.body.code, "mode_mismatch")
+    r = await api("POST", "/api/route/tasks", {
+      as: "disp",
+      body: { type: "PRODUCTION_PICKUP", sourceCode: "LINE-SIPA", destCode: "FG-B-5", huCode: SSCC.P5, simulation: true, wmsRefId: "WMS-X" },
+    })
+    assert.equal(r.status, 400)
+    assert.equal(r.body.code, "simulation_wms_ref")
+    // учебное задание по той же палете не блокирует реальное (отдельный уникальный индекс)
+    r = await api("POST", "/api/route/tasks", { as: "disp", body: { type: "PRODUCTION_PICKUP", sourceCode: "LINE-SIPA", destCode: "FG-B-5", huCode: SSCC.P5, simulation: true } })
+    assert.equal(r.status, 200, JSON.stringify(r.body))
+    ctx.sim = r.body.task
+    assert.equal(ctx.sim.simulation, true)
+    r = await api("POST", `/api/route/tasks/${ctx.sim.taskId}/dispatch`, { as: "disp", body: { action: "assign", karaId: "kara-1" } })
+    assert.equal(r.status, 409)
+    assert.equal(r.body.code, "mode_mismatch")
+    r = await api("POST", `/api/route/tasks/${ctx.sim.taskId}/dispatch`, { as: "disp", body: { action: "assign", karaId: "kara-2" } })
+    assert.equal(r.status, 200, JSON.stringify(r.body))
+  })
+
+  test("Forklift: координаты не смешиваются — камера не пишет в симуляцию, симулятор не пишет в реальную кару", async () => {
+    const dev = await api("POST", "/api/route/devices", { as: "mapadmin", body: { karaId: "kara-2" } })
+    assert.equal(dev.status, 200)
+    const n = ctx.map.nodes.find((x) => x.kind === "junction")
+    let r = await api("POST", "/api/route/forklifts/kara-2/position", {
+      bearer: dev.body.token,
+      body: { x: n.x, y: n.y, quality: 0.9, measuredAt: new Date().toISOString(), source: "apriltag" },
+    })
+    assert.equal(r.body.accepted, false)
+    assert.equal(r.body.code, "mode_mismatch")
+    r = await api("POST", "/api/route/forklifts/kara-1/simulate", { as: "disp", body: { x: n.x, y: n.y } })
+    assert.equal(r.status, 409)
+    assert.equal(r.body.code, "not_simulation")
+    r = await api("POST", "/api/route/forklifts/kara-2/simulate", { as: "driver2", body: { x: n.x, y: n.y } })
+    assert.equal(r.status, 403, "чужой водитель не двигает учебную кару")
+  })
+
+  test("Forklift: учебное задание проходит все этапы без складской транзакции", async () => {
+    const before = {
+      log: psql(`SELECT count(*) FROM wms_request_log`),
+      mov: psql(`SELECT count(*) FROM wms_stock_movements`),
+      loc: psql(`SELECT DISTINCT l.location_code FROM wms_item_codes mic JOIN codes c ON c.code_id = mic.code_id
+        JOIN wms_locations l ON l.location_id = mic.current_location_id WHERE c.ai21_serial = '${SSCC.P5.slice(2)}'`),
+    }
+    let s = await api("GET", "/api/route/tasks/active", { as: "driver1" })
+    assert.equal(s.body.task.taskId, ctx.sim.taskId)
+    assert.equal(s.body.task.simulation, true)
+    let r = await api("POST", `/api/route/tasks/${ctx.sim.taskId}/accept`, { as: "driver1", body: { clientRequestId: crid(), expectedVersion: s.body.task.version } })
+    assert.equal(r.status, 200, JSON.stringify(r.body))
+    const nodeOf = (id) => ctx.map.nodes.find((x) => x.id === id)
+    const t = stateTask(r)
+    const src = nodeOf(t.sourceNodeId)
+    assert.ok(src, "узел места получения")
+    r = await api("POST", "/api/route/forklifts/kara-2/simulate", { as: "driver1", body: { x: src.x, y: src.y, headingDeg: 0 } })
+    assert.equal(r.status, 200, JSON.stringify(r.body))
+    assert.equal(r.body.position.source, "simulation")
+    assert.equal(r.body.arrived, "LINE-SIPA", "учебная позиция отметила прибытие")
+    r = await api("POST", `/api/route/tasks/${ctx.sim.taskId}/scan-pallet`, { as: "driver1", body: { clientRequestId: crid(), code: SSCC.P5 } })
+    assert.equal(r.body.decision.ok, true, JSON.stringify(r.body.decision))
+    r = await api("POST", `/api/route/tasks/${ctx.sim.taskId}/confirm-load`, { as: "driver1", body: { clientRequestId: crid() } })
+    assert.equal(r.status, 200, JSON.stringify(r.body))
+    const dst = nodeOf(stateTask(r).destNodeId)
+    r = await api("POST", "/api/route/forklifts/kara-2/simulate", { as: "driver1", body: { x: dst.x, y: dst.y, headingDeg: 90 } })
+    assert.equal(r.body.arrived, "FG-B-5")
+    r = await api("POST", `/api/route/tasks/${ctx.sim.taskId}/scan-address`, { as: "driver1", body: { clientRequestId: crid(), code: "FG-B-5" } })
+    assert.equal(r.body.decision.ok, true, JSON.stringify(r.body.decision))
+    // смена режима посреди задания запрещена
+    const sw = await api("POST", "/api/route/forklifts/kara-2/mode", { as: "mapadmin", body: { mode: "REAL", reason: "конец обучения" } })
+    assert.equal(sw.status, 409)
+    assert.equal(sw.body.code, "kara_busy")
+    r = await api("POST", `/api/route/tasks/${ctx.sim.taskId}/confirm-dropoff`, { as: "driver1", body: { clientRequestId: crid() } })
+    assert.equal(r.status, 200, JSON.stringify(r.body))
+    assert.equal(r.body.wms.disposition, "simulated")
+    assert.equal(psql(`SELECT status || '|' || wms_movement_status FROM route_tasks WHERE task_id = ${ctx.sim.taskId}`), "COMPLETED|simulated")
+    assert.equal(psql(`SELECT count(*) FROM wms_request_log`), before.log, "в WMS не было запросов на перемещение")
+    assert.equal(psql(`SELECT count(*) FROM wms_stock_movements`), before.mov, "остатки не менялись")
+    const locAfter = psql(`SELECT DISTINCT l.location_code FROM wms_item_codes mic JOIN codes c ON c.code_id = mic.code_id
+      JOIN wms_locations l ON l.location_id = mic.current_location_id WHERE c.ai21_serial = '${SSCC.P5.slice(2)}'`)
+    assert.equal(locAfter, before.loc, "палета в WMS осталась на месте")
+    assert.equal(psql(`SELECT count(*) FROM route_events WHERE topic = 'simulation.movement.done' AND task_id = ${ctx.sim.taskId}`), "1")
+    assert.equal(psql(`SELECT count(*) FROM route_events WHERE topic = 'wms.movement.confirmed' AND task_id = ${ctx.sim.taskId}`), "0")
+    // реальное задание по той же палете не тронуто
+    assert.equal(psql(`SELECT status FROM route_tasks WHERE hu_code = '${SSCC.P5}' AND NOT simulation`), "QUEUED")
+    const back = await api("POST", "/api/route/forklifts/kara-2/mode", { as: "mapadmin", body: { mode: "REAL", reason: "конец обучения" } })
+    assert.equal(back.status, 200, JSON.stringify(back.body))
+    r = await api("POST", "/api/route/forklifts/kara-2/simulate", { as: "driver1", body: { x: dst.x, y: dst.y } })
+    assert.equal(r.status, 409, "после возврата в REAL учебные координаты не принимаются")
+  })
+
+  test("Forklift: состояние камеры и версия калибровки от сервиса позиционирования", async () => {
+    const dev = await api("POST", "/api/route/devices", { as: "mapadmin", body: { karaId: "kara-1" } })
+    const token = dev.body.token
+    let r = await api("POST", "/api/route/localizer/status", {
+      bearer: token,
+      body: {
+        source: "apriltag-tracking",
+        camera: "ok",
+        captureFps: 7.1,
+        lastFrameAt: Date.now() / 1000,
+        visibleTags: ["tag16h5:3"],
+        calibration: { version: "cal-abc1234567", rmsPx: 0.16, accuracyChecked: false, note: "рулеткой не проверялась" },
+      },
+    })
+    assert.equal(r.status, 200, JSON.stringify(r.body))
+    r = await api("POST", "/api/route/localizer/status", { as: "disp", body: { camera: "ok" } })
+    assert.equal(r.status, 403, "статус пишет только сервис позиционирования")
+    const n = ctx.map.nodes.find((x) => x.kind === "junction")
+    r = await api("POST", "/api/route/forklifts/kara-1/position", {
+      bearer: token,
+      body: { x: n.x, y: n.y, quality: 0.9, measuredAt: new Date().toISOString(), source: "apriltag", calibrationVersion: "cal-abc1234567" },
+    })
+    assert.equal(r.body.accepted, true, JSON.stringify(r.body))
+    assert.equal(r.body.position.calibrationVersion, "cal-abc1234567")
+    const st = await api("GET", "/api/route/forklifts", { as: "disp" })
+    const k1 = (st.body.forklifts || st.body.fleet?.units || []).find((u) => u.id === "kara-1")
+    assert.ok(k1, JSON.stringify(Object.keys(st.body)))
+    assert.equal(k1.localizer.camera, "ok")
+    assert.equal(k1.localizer.calibration.version, "cal-abc1234567")
+    assert.equal(k1.localizer.calibration.accuracyChecked, false)
+    assert.equal(k1.opMode, "REAL")
+  })
+
+  test("Forklift: метка на стене хранит крепление и версию привязки", async () => {
+    const m = { family: "tag16h5", tagId: 4, x: 1200, y: 800, zM: 1.2, yawDeg: 180, sizeM: 0.072, mount: "wall" }
+    let r = await api("PUT", "/api/route/apriltags", { as: "mapadmin", body: { markers: [m] } })
+    assert.equal(r.status, 200, JSON.stringify(r.body))
+    r = await api("PUT", "/api/route/apriltags", { as: "mapadmin", body: { markers: [{ ...m, x: 1210 }] } })
+    assert.equal(r.status, 200)
+    assert.equal(psql(`SELECT mount || '|' || binding_version FROM route_apriltag_markers WHERE family = 'tag16h5' AND tag_id = 4`), "wall|2")
+    r = await api("PUT", "/api/route/apriltags", { as: "mapadmin", body: { markers: [{ ...m, mount: "floor" }] } })
+    assert.equal(r.status, 400)
+    assert.equal(r.body.code, "bad_mount")
+  })
+
+  test("Forklift: kara-commands без токена на сервере — диагностика честно сообщает, браузеру токен не нужен", async () => {
+    const r = await api("GET", "/api/route/integrations/kara-commands", { as: "mapadmin" })
+    assert.equal(r.status, 200, JSON.stringify(r.body))
+    assert.equal(r.body.configured, false)
+    assert.equal(r.body.reachable, false)
+    assert.match(r.body.pickupPlace, /не используются/)
+    const d = await api("GET", "/api/route/integrations/kara-commands", { as: "driver1" })
+    assert.equal(d.status, 403)
+  })
+
   test("SSE: поток событий с дочиткой по Last-Event-ID", async () => {
     const ctrl = new AbortController()
     const res = await fetch(`${base}/api/route/events?siteCode=skeet&since=0`, { headers: { cookie: session("disp") }, signal: ctrl.signal })

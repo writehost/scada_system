@@ -49,12 +49,34 @@ type TaskView = {
   route: { phase: string; result: RouteResult | null; plannedPickupToDrop: RouteResult | null; from: string } | null
 }
 
-type Position = { karaId: string; x: number; y: number; headingDeg: number | null; state: string; label: string; quality: number; source: string }
+type Position = {
+  karaId: string
+  x: number
+  y: number
+  headingDeg: number | null
+  state: string
+  label: string
+  quality: number
+  source: string
+  ageS?: number
+  measuredAt?: string
+}
+
+type Localizer = {
+  camera: string
+  cameraError: string | null
+  captureFps: number | null
+  lastFrameAt: string | null
+  visibleTags: string[]
+  calibration: { version: string | null; rmsPx: number | null; accuracyChecked: boolean; note: string | null } | null
+  reportedAt: string
+  stale: boolean
+}
 
 type DriverState = {
   user?: { login: string; fio: string }
   session: { karaId: string; karaName: string | null; shiftCode: string | null } | null
-  forklift?: { id: string; name: string; boardNumber: string | null }
+  forklift?: { id: string; name: string; boardNumber: string | null; opMode?: "REAL" | "SIMULATION"; localizer?: Localizer | null }
   task?: TaskView | null
   next?: { taskNo: string; typeLabel: string; sourceCode: string; destCode: string; emptyRunM: number | null } | null
   position?: Position | null
@@ -78,12 +100,50 @@ const PROBLEMS: Array<{ kind: string; label: string }> = [
 
 const ADDRESS_ALT = new Set(["address_full", "address_reserved", "placement_rule", "address_quarantine", "address_inactive"])
 
+function ago(p: Position): string {
+  const s = p.measuredAt ? Math.max(0, (Date.now() - Date.parse(p.measuredAt)) / 1000) : p.ageS ?? null
+  if (s == null || !Number.isFinite(s)) return ""
+  return s < 60 ? ` · ${Math.round(s)} с назад` : ` · ${Math.round(s / 60)} мин назад`
+}
+
 function posChip(p: Position | null | undefined): { cls: string; ic: string; text: string } {
   if (!p) return { cls: "bad", ic: "⌖", text: "Позиция не определена" }
+  if (p.source === "simulation") return p.state === "ok" ? { cls: "sim", ic: "⌖", text: "Позиция симулятора" } : { cls: "warn", ic: "⌖", text: `Симулятор остановлен${ago(p)}` }
   if (p.state === "ok") return { cls: "ok", ic: "⌖", text: "Позиция по меткам" }
   if (p.state === "manual") return { cls: "warn", ic: "✋", text: "Ручная позиция" }
-  if (p.state === "degraded") return { cls: "warn", ic: "⌖", text: "Позиция неточная" }
-  return { cls: "bad", ic: "⌖", text: "Позиция не определена" }
+  if (p.state === "degraded") return { cls: "warn", ic: "⌖", text: `Позиция недостоверна${ago(p)}` }
+  return { cls: "bad", ic: "⌖", text: `Позиционирование недоступно${ago(p)}` }
+}
+
+/** Состояние камеры погрузчика по данным сервиса позиционирования. */
+function camChip(l: Localizer | null | undefined): { cls: string; text: string; title: string } {
+  if (!l) return { cls: "warn", text: "Камера: нет данных", title: "Сервис позиционирования не присылал состояние" }
+  const cal = l.calibration
+  const calNote = cal ? `Калибровка ${cal.version ?? "?"}${cal.rmsPx != null ? `, RMS ${cal.rmsPx} px` : ""}. ${cal.note ?? ""}` : "Нет данных о калибровке"
+  if (l.stale) return { cls: "bad", text: "Камера: нет связи", title: `Последнее состояние ${new Date(l.reportedAt).toLocaleTimeString("ru-RU")}. ${calNote}` }
+  if (l.camera === "error") return { cls: "bad", text: "Камера: ошибка", title: `${l.cameraError ?? ""} ${calNote}` }
+  if (l.camera !== "ok") return { cls: "warn", text: "Камера: нет кадров", title: calNote }
+  const fps = l.captureFps != null ? ` ${l.captureFps.toFixed(0)} к/с` : ""
+  if (cal && !cal.accuracyChecked) return { cls: "warn", text: `Камера${fps} · точность не проверена`, title: calNote }
+  return { cls: "ok", text: `Камера${fps}`, title: calNote }
+}
+
+/** Точка на ломаной через dist метров от начала (координаты плана) и курс участка. */
+function pointAlong(line: Pt[], distUnits: number): { x: number; y: number; headingDeg: number; done: boolean } {
+  let left = distUnits
+  for (let i = 1; i < line.length; i++) {
+    const a = line[i - 1]
+    const b = line[i]
+    const seg = Math.hypot(b.x - a.x, b.y - a.y)
+    const h = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI
+    if (left <= seg || i === line.length - 1) {
+      const k = seg > 0 ? Math.min(1, left / seg) : 1
+      return { x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k, headingDeg: h, done: i === line.length - 1 && left >= seg }
+    }
+    left -= seg
+  }
+  const last = line[line.length - 1]
+  return { x: last.x, y: last.y, headingDeg: 0, done: true }
 }
 
 export function RouteDriver() {
@@ -322,6 +382,27 @@ export function RouteDriver() {
   const routeLine = rr && rr.ok ? rr.polyline : null
   const planned = task && !task.loaded && task.route?.plannedPickupToDrop?.ok ? task.route.plannedPickupToDrop.polyline : null
   const destRack = task?.destCode?.replace(/^FG-/, "") ?? null
+  const simMode = state?.forklift?.opMode === "SIMULATION"
+  const [simRunning, setSimRunning] = useState(false)
+  const simDist = useRef(0)
+  const simKey = rr && rr.ok ? `${task?.taskId}:${task?.status}:${rr.lengthM}` : ""
+  useEffect(() => {
+    simDist.current = 0
+  }, [simKey])
+  useEffect(() => {
+    // Симулятор: только кара в режиме SIMULATION, сервер всё равно проверяет режим и не принимает
+    // учебные координаты для реальной кары. Шаг ~1,2 м каждые 0,4 с (≈3 м/с).
+    if (!simMode || !simRunning || !routeLine || routeLine.length < 2 || !state?.session) return
+    const mpu = g?.coord.metersPerUnit ?? 0.8 / 12
+    const karaId = state.session.karaId
+    const timer = setInterval(() => {
+      simDist.current += 1.2 / mpu
+      const p = pointAlong(routeLine, simDist.current)
+      void api(`POST`, `/api/route/forklifts/${encodeURIComponent(karaId)}/simulate`, { x: p.x, y: p.y, headingDeg: p.headingDeg }).catch(() => setSimRunning(false))
+      if (p.done) setSimRunning(false)
+    }, 400)
+    return () => clearInterval(timer)
+  }, [simMode, simRunning, routeLine, state?.session, g?.coord.metersPerUnit])
 
   /* ---------- выбор погрузчика ---------- */
   if (state && !state.session) {
@@ -331,7 +412,7 @@ export function RouteDriver() {
         <div className="rt-pick">
           <div className="rt-top">
             <div className="rt-brand">
-              SCADA System Route<small>НАВИГАТОР ПОГРУЗЧИКА</small>
+              SCADA System Forklift<small>ВОДИТЕЛЬ ПОГРУЗЧИКА</small>
             </div>
             <div className="rt-spacer" />
             <span className="rt-who">{state.user?.fio}</span>
@@ -373,6 +454,7 @@ export function RouteDriver() {
 
   /* ---------- основной экран ---------- */
   const pc = posChip(pos as Position | null)
+  const cc = camChip(state?.forklift?.localizer)
   const st = task?.status
   const enRoute = st === "EN_ROUTE_PICKUP" || st === "ACCEPTED" || st === "EN_ROUTE_DROPOFF" || st === "LOAD_CONFIRMED"
   const lastScan = task?.lastScan
@@ -474,9 +556,12 @@ export function RouteDriver() {
       <div className="rt-driver">
         <header className="rt-top">
           <div className="rt-brand">
-            SCADA System Route<small>НАВИГАТОР ПОГРУЗЧИКА</small>
+            SCADA System Forklift<small>ВОДИТЕЛЬ ПОГРУЗЧИКА</small>
           </div>
           <span className="rt-kara">{state?.forklift?.name ?? "…"}</span>
+          <span className={`rt-chip ${simMode ? "sim" : "real"}`} title={simMode ? "Учебный режим: складские операции в WMS не выполняются" : "Реальная эксплуатация"}>
+            {simMode ? "СИМУЛЯЦИЯ" : "REAL"}
+          </span>
           <span className="rt-who">
             {state?.user?.fio}
             {state?.session?.shiftCode ? ` · смена ${state.session.shiftCode}` : ""}
@@ -486,10 +571,16 @@ export function RouteDriver() {
             <span className="ic">{online ? "●" : "✕"}</span>
             {online ? "На связи" : "Нет соединения"}
           </span>
-          <span className={`rt-chip ${pc.cls}`}>
+          <span className={`rt-chip rt-pos ${pc.cls}`} title={pc.text}>
             <span className="ic">{pc.ic}</span>
-            {pc.text}
+            <span className="txt">{pc.text}</span>
           </span>
+          {!simMode && (
+            <span className={`rt-chip rt-cam ${cc.cls}`} title={`${cc.text}. ${cc.title}`}>
+              <span className="ic">◉</span>
+              <span className="txt">{cc.text}</span>
+            </span>
+          )}
           {task && <span className={`rt-chip ${st === "BLOCKED" ? "bad" : st === "PAUSED" ? "warn" : "info"}`}>{task.statusLabel}</span>}
         </header>
 
@@ -508,6 +599,17 @@ export function RouteDriver() {
             onOrientationChange={setOrientation}
           />
           {!online && <div className="rt-offline">Нет соединения · показаны последние данные сервера</div>}
+          {simMode && (
+            <div className="rt-simbar" role="status">
+              <b>Режим симуляции</b> · координаты от симулятора, перемещения палет в WMS не выполняются
+              {enRoute && !pos && <span> · задайте стартовую точку (диспетчер → «Ручная позиция»)</span>}
+              {enRoute && routeLine && (
+                <button type="button" className="rt-btn" onClick={() => setSimRunning((v) => !v)}>
+                  {simRunning ? "⏸ Стоп" : "▶ Ехать по маршруту"}
+                </button>
+              )}
+            </div>
+          )}
           <div className="rt-banner">
             {rr && rr.ok && enRoute && (
               <span className="rt-chip info">

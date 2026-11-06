@@ -191,9 +191,49 @@ async function main() {
     const ep = await e.newPage()
     ep.on("pageerror", (x) => errors.push(String(x)))
     await ep.goto(`${base}/route/editor`)
-    await ep.getByText("РЕДАКТОР ТОПОЛОГИИ").waitFor()
+    await ep.getByText("КАРТА И МЕТКИ").waitFor()
     await ep.waitForTimeout(1500)
     await ep.screenshot({ path: `${OUT}/13-editor-1600x900.png` })
+
+    // SCADA System Forklift: камера kara-1 по данным сервиса позиционирования, kara-2 в режиме симуляции
+    const dev = await api("POST", "/api/route/devices", { as: "mapadmin", body: { karaId: "kara-1" } })
+    await api("POST", "/api/route/localizer/status", {
+      bearer: dev.body.token,
+      body: { source: "apriltag-tracking", camera: "ok", captureFps: 7.1, lastFrameAt: Date.now() / 1000, visibleTags: ["tag16h5:3"],
+        calibration: { version: "cal-demo", rmsPx: 0.16, accuracyChecked: false, note: "точность рулеткой не проверялась" } },
+    })
+    let r = await api("POST", "/api/route/forklifts/kara-2/mode", { as: "mapadmin", body: { mode: "SIMULATION", reason: "обучение водителей" } })
+    assert.equal(r.status, 200, JSON.stringify(r.body))
+    // стартовая точка учебной кары — ручная позиция диспетчера (после смены режима позиция сброшена)
+    await api("POST", "/api/route/forklifts/kara-2/position", { as: "disp", body: { x: start.x - 400, y: start.y + 120, headingDeg: 0 } })
+    r = await api("POST", "/api/route/tasks", { as: "disp", body: { type: "RELOCATION", sourceCode: "FG-A-40", destCode: "FG-A-34", huCode: SSCC.P4, simulation: true } })
+    assert.equal(r.status, 200, JSON.stringify(r.body))
+    r = await api("POST", `/api/route/tasks/${r.body.task.taskId}/dispatch`, { as: "disp", body: { action: "assign", karaId: "kara-2" } })
+    assert.equal(r.status, 200, JSON.stringify(r.body))
+    const sc = await browser.newContext({ viewport: { width: 1280, height: 800 } })
+    await sc.addCookies([{ name: "yms_session", value: cookieValue("driver2"), domain: "127.0.0.1", path: "/" }])
+    const sp = await sc.newPage()
+    sp.setDefaultTimeout(15000)
+    sp.on("pageerror", (x) => errors.push(String(x)))
+    await sp.goto(`${base}/route`)
+    await sp.getByRole("button", { name: /Кара №2/ }).click()
+    await sp.getByText("СИМУЛЯЦИЯ", { exact: true }).waitFor()
+    await sp.getByText("Принять задание").click()
+    await sp.getByRole("button", { name: /Ехать по маршруту/ }).click()
+    await sp.waitForTimeout(3000)
+    const simPos = psql(`SELECT source FROM route_positions WHERE kara_id = 'kara-2'`)
+    assert.equal(simPos, "simulation", "симулятор пишет учебную позицию")
+    await sp.screenshot({ path: `${OUT}/14-simulation-driver-1280x800.png` })
+    await page.goto(`${base}/route`)
+    await page.waitForTimeout(1500)
+    await page.screenshot({ path: `${OUT}/15-real-driver-camera-1280x800.png` })
+    await noScroll(page, "1280×800 REAL, камера и режим")
+    await noScroll(sp, "1280×800 СИМУЛЯЦИЯ")
+    await dp.reload()
+    await dp.getByText("ДИСПЕТЧЕРСКАЯ").waitFor()
+    await dp.getByRole("button", { name: /Погрузчики/ }).click()
+    await dp.waitForTimeout(800)
+    await dp.screenshot({ path: `${OUT}/16-dispatch-fleet-modes-1600x900.png` })
 
     await browser.close()
     assert.deepEqual(errors, [], `ошибки в браузере: ${errors.join("\n")}`)
@@ -206,5 +246,5 @@ async function main() {
 main().catch((e) => {
   console.error(e)
   process.exitCode = 1
-  teardownStand()
+  Promise.resolve(teardownStand()).finally(() => process.exit(1))
 })

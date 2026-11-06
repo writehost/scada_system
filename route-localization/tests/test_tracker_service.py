@@ -141,7 +141,7 @@ def test_publisher_keeps_only_latest(monkeypatch):
     sent = []
 
     class C(RouteClient):
-        def send(self, out, tag_ids=None, reproj=None):
+        def send(self, out, tag_ids=None, reproj=None, calibration_version=None):
             time.sleep(0.05)
             sent.append(out.x)
             return {"accepted": True}

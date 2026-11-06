@@ -53,7 +53,8 @@ export type AddressCheck = {
 export type MoveResult =
   | {
       ok: true
-      disposition: "applied" | "duplicate"
+      /** simulated — учебное задание: WMS не вызывалась, остатки не менялись */
+      disposition: "applied" | "duplicate" | "simulated"
       movementId: string
       palletCode: string
       fromLocationCode: string | null

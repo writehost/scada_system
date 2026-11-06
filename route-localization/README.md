@@ -19,6 +19,13 @@
 | Калибровка с версией, привязанная к камере/объективу/разрешению | `route-localization calibrate` → JSON → `POST /api/route/calibrations` (новая версия на каждую загрузку) |
 | Тысячи меток | реестр `route_apriltag_markers` (семейство + ID); `tag36h11` даёт 587 ID, для тысяч — `tagStandard41h12` (2115) / `tagStandard52h13` (48714) через pupil-apriltags |
 
+## Источник кадров apriltag-tracking (SCADA System Forklift)
+
+`"source": "apriltag-tracking"` в конфиге — камеру, обнаружение и фильтры даёт модуль `../apriltag-tracking`
+(тот, что проверен на MV-CU013-A0GM), а этот сервис переводит его измерения в координаты склада
+(`tracking_bridge.py`). Пример — `config.tracking.example.json`; подробности — `docs/FORKLIFT.md`.
+Камера может смотреть вперёд (`cameraToForklift.look: "forward"`) на метки на стенах (`mount: "wall"`).
+
 ## Установка
 
 ```bash

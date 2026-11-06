@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server"
 import { advanceMission } from "@/lib/wms/fg-kara-fleet"
 import { withFleetSite } from "@/lib/wms/fg-kara-fleet-http"
+import { requireWmsActor } from "@/lib/wms/require-actor"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> | { id: string } }) {
+  // Смена статуса миссии кары — только авторизованным пользователем WMS (как POST/PATCH/DELETE кар)
+  const actorGate = await requireWmsActor(req)
+  if ("error" in actorGate) return actorGate.error
+
   const params = await Promise.resolve(ctx.params)
   return withFleetSite(req, async (_client, siteId, body) => {
     try {

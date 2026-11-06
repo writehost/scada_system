@@ -25,9 +25,47 @@ type Task = {
   createdAt: string
   wmsRefKind: string | null
   wmsRefId: string | null
+  simulation?: boolean
 }
 type Position = { karaId: string; x: number; y: number; headingDeg: number | null; state: string; label: string; ageS: number; source: string }
-type Unit = { id: string; name: string; enabled: boolean; autoAssign: boolean; forkliftType: string; profileStatus: string; driverName: string | null }
+type Localizer = {
+  camera: string
+  cameraError: string | null
+  captureFps: number | null
+  visibleTags: string[]
+  calibration: { version: string | null; rmsPx: number | null; accuracyChecked: boolean; note: string | null } | null
+  reportedAt: string
+  stale: boolean
+}
+type Unit = {
+  id: string
+  name: string
+  enabled: boolean
+  autoAssign: boolean
+  forkliftType: string
+  profileStatus: string
+  driverName: string | null
+  opMode?: "REAL" | "SIMULATION"
+  localizer?: Localizer | null
+}
+
+/** Подпись позиции (живые события SSE приходят без label — считаем по состоянию и источнику). */
+function posLabel(p: { state: string; source: string; label?: string }): string {
+  if (p.source === "simulation") return p.state === "ok" ? "симулятор" : "симулятор остановлен"
+  if (p.label) return p.label
+  return { ok: "по меткам", degraded: "недостоверна", lost: "не определена", manual: "ручная" }[p.state] ?? p.state
+}
+
+function cameraLine(l: Localizer | null | undefined): { cls: string; text: string } {
+  if (!l) return { cls: "warn", text: "камера: нет данных от сервиса позиционирования" }
+  if (l.stale) return { cls: "bad", text: `камера: нет связи с ${new Date(l.reportedAt).toLocaleTimeString("ru-RU")}` }
+  if (l.camera === "error") return { cls: "bad", text: `камера: ошибка ${l.cameraError ?? ""}` }
+  if (l.camera !== "ok") return { cls: "warn", text: "камера: нет кадров" }
+  const cal = l.calibration
+  const tags = l.visibleTags.length ? `, метки ${l.visibleTags.join(" ")}` : ", меток не видно"
+  const calText = cal ? ` · калибровка ${cal.version ?? "?"}${cal.accuracyChecked ? "" : " (точность не проверена)"}` : ""
+  return { cls: cal && !cal.accuracyChecked ? "warn" : "ok", text: `камера ${l.captureFps != null ? l.captureFps.toFixed(0) + " к/с" : ""}${tags}${calText}` }
+}
 type Board = {
   fleet: { available: boolean; reason: string | null; units: Unit[] }
   positions: Position[]
@@ -171,7 +209,7 @@ export function RouteDispatch() {
       <div className="rt-desk">
         <header className="rt-top">
           <div className="rt-brand">
-            SCADA System Route<small>ДИСПЕТЧЕРСКАЯ</small>
+            SCADA System Forklift<small>ДИСПЕТЧЕРСКАЯ</small>
           </div>
           <a className="rt-chip info" href="/route/editor">
             Редактор карты
@@ -240,7 +278,7 @@ export function RouteDispatch() {
                     <div key={x.taskId} className={`rt-item ${sel === x.taskId ? "sel" : ""}`} onClick={() => setSel(x.taskId)}>
                       <div className="h">
                         <span>
-                          {x.taskNo} · {x.typeLabel}
+                          {x.simulation ? <span className="rt-badge sim">СИМ</span> : null} {x.taskNo} · {x.typeLabel}
                         </span>
                         <span className={`rt-badge ${BADGE[x.status] ?? ""}`}>{x.statusLabel}</span>
                       </div>
@@ -262,19 +300,28 @@ export function RouteDispatch() {
                   const s = sessions.get(u.id)
                   const p = positions.get(u.id)
                   const active = open.find((x) => x.karaId === u.id)
+                  const cam = cameraLine(u.localizer)
+                  const sim = u.opMode === "SIMULATION"
                   return (
                     <div key={u.id} className="rt-item">
                       <div className="h">
-                        <span>{u.name}</span>
+                        <span>
+                          {u.name} <span className={`rt-badge ${sim ? "sim" : ""}`}>{sim ? "СИМУЛЯЦИЯ" : "REAL"}</span>
+                        </span>
                         <span className={`rt-badge ${s ? "ok" : ""}`}>{s ? `занят: ${s.fio}` : "свободен"}</span>
                       </div>
                       <div className="m">
                         Позиция:{" "}
                         <span className={`rt-badge ${p?.state === "ok" ? "ok" : p?.state === "manual" || p?.state === "degraded" ? "warn" : "bad"}`}>
-                          {p ? `${p.label}` : "не определена"}
+                          {p ? posLabel(p) : "не определена"}
                         </span>{" "}
                         {active ? `· ${active.taskNo} ${active.statusLabel}` : "· без задания"}
                       </div>
+                      {!sim && (
+                        <div className="m">
+                          <span className={`rt-badge ${cam.cls}`}>{cam.text}</span>
+                        </div>
+                      )}
                       <div className="rt-row">
                         <button
                           type="button"
@@ -285,6 +332,18 @@ export function RouteDispatch() {
                         </button>
                         <button type="button" className="rt-mini" onClick={() => setMode({ kind: "position", karaId: u.id })}>
                           Ручная позиция
+                        </button>
+                        <button
+                          type="button"
+                          className="rt-mini"
+                          title="Только администратор; без активного задания; причина обязательна"
+                          onClick={() => {
+                            const to = sim ? "REAL" : "SIMULATION"
+                            const reason = window.prompt(`Перевести ${u.name} в режим ${to}? Укажите причину:`)
+                            if (reason && reason.trim()) void act(() => api("POST", `/api/route/forklifts/${u.id}/mode`, { mode: to, reason: reason.trim() }), `${u.name}: режим ${to}`)
+                          }}
+                        >
+                          {sim ? "Вернуть в REAL" : "В симуляцию"}
                         </button>
                       </div>
                     </div>
@@ -485,8 +544,8 @@ function ProblemItem({
 }
 
 function CreatePane({ act, demand }: { act: (fn: () => Promise<unknown>, ok?: string) => Promise<void>; demand?: { wmsTasks: boolean; karaMissions: boolean } }) {
-  const [f, setF] = useState({ type: "RELOCATION", huCode: "", sourceCode: "", destCode: "", priority: 50, note: "" })
-  const set = (k: string, v: string | number) => setF((p) => ({ ...p, [k]: v }))
+  const [f, setF] = useState({ type: "RELOCATION", huCode: "", sourceCode: "", destCode: "", priority: 50, note: "", simulation: false })
+  const set = (k: string, v: string | number | boolean) => setF((p) => ({ ...p, [k]: v }))
   return (
     <>
       <div className="rt-item">
@@ -517,8 +576,12 @@ function CreatePane({ act, demand }: { act: (fn: () => Promise<unknown>, ok?: st
           Приоритет (0–100)
           <input type="number" value={f.priority} onChange={(e) => set("priority", Number(e.target.value))} />
         </label>
-        <button type="button" className="rt-mini primary" onClick={() => void act(() => api("POST", "/api/route/tasks", f), "Задание создано и поставлено в очередь")}>
-          Создать
+        <label className="rt-field rt-check">
+          <input type="checkbox" checked={f.simulation} onChange={(e) => set("simulation", e.target.checked)} />
+          Учебное задание (симуляция): только для кары в режиме СИМУЛЯЦИЯ, палета в WMS не перемещается
+        </label>
+        <button type="button" className="rt-mini primary" onClick={() => void act(() => api("POST", "/api/route/tasks", f), f.simulation ? "Учебное задание создано" : "Задание создано и поставлено в очередь")}>
+          {f.simulation ? "Создать учебное задание" : "Отправить в очередь"}
         </button>
         <div className="m">Палета проверяется в WMS: номенклатура, партия и количество берутся из WMS.</div>
       </div>

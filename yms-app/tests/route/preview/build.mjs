@@ -26,7 +26,7 @@ await build({
 })
 copyFileSync(path.join(YMS, "app/route/route.css"), path.join(out, "route/route.css"))
 copyFileSync(path.join(YMS, "public/route/plan/fg.png"), path.join(out, "route/plan/fg.png"))
-const html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>SCADA System Route</title><link rel="stylesheet" href="/route/route.css"><style>html,body{margin:0;height:100%}</style></head><body><div id="root"></div><script type="module" src="/route/app.js"></script></body></html>`
+const html = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><title>SCADA System Forklift</title><link rel="stylesheet" href="/route/route.css"><style>html,body{margin:0;height:100%}</style></head><body><div id="root"></div><script type="module" src="/route/app.js"></script></body></html>`
 for (const p of ["route/index.html", "route/dispatch/index.html", "route/editor/index.html"]) {
   mkdirSync(path.dirname(path.join(out, p)), { recursive: true })
   writeFileSync(path.join(out, p), html)

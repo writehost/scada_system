@@ -1,15 +1,13 @@
 import { actorCan, actorLabel } from "@/lib/route/auth"
 import { publish } from "@/lib/route/events"
-import { dist, nodeForAddress } from "@/lib/route/graph"
 import { fail, num, str, withRoute, withRouteTx } from "@/lib/route/http"
 import { getPublishedMap } from "@/lib/route/maps"
-import { getPosition, ingestPosition } from "@/lib/route/positions"
-import { activeTaskForKara, transition } from "@/lib/route/tasks"
+import { forkliftMode } from "@/lib/route/fleet"
+import { getPosition, ingestPosition, sourceAllowed } from "@/lib/route/positions"
+import { autoArrive } from "@/lib/route/arrive"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
-
-const AUTO_ARRIVE_M = Number(process.env.ROUTE_AUTO_ARRIVE_M || 3)
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -34,6 +32,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       if (!actorCan(a, "route.position.manual")) fail(403, "недостаточно прав: route.position.manual", "permission_denied")
       source = "manual"
     }
+    const mode = await forkliftMode(ctx.client, ctx.siteId, id)
+    if (!sourceAllowed(mode, source)) {
+      // REAL не принимает учебные координаты, SIMULATION — координаты камеры: режимы не смешиваются
+      return { accepted: false, code: "mode_mismatch", reason: `погрузчик в режиме ${mode}: источник ${source} не принимается` }
+    }
     const map = await getPublishedMap(ctx.client, ctx.siteId)
     const mpu = map?.geometry.coord.metersPerUnit ?? 0.8 / 12
     const state = str(b, "state", 12) as "ok" | "predicted" | "lost"
@@ -53,6 +56,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         source,
         state: state === "lost" || state === "predicted" ? state : "ok",
         setBy: a.kind === "user" ? actorLabel(a) : null,
+        calibrationVersion: a.kind === "device" ? str(b, "calibrationVersion", 40) || null : null,
       },
       mpu
     )
@@ -65,24 +69,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (source === "manual") await publish(ctx.client, ctx.siteId, "forklift.position.updated", { karaId: id, payload: { manual: true, by: actorLabel(a) } })
 
     // Автоприбытие — только по достоверной позиции AprilTag, не по ручной и не по прогнозу.
-    let arrived: string | null = null
-    if (p.state === "ok" && p.source === "apriltag" && map) {
-      const t = await activeTaskForKara(ctx.client, ctx.siteId, id)
-      if (t && (t.status === "EN_ROUTE_PICKUP" || t.status === "EN_ROUTE_DROPOFF")) {
-        const code = t.status === "EN_ROUTE_PICKUP" ? t.sourceCode : t.destCode
-        const nodeId = (t.status === "EN_ROUTE_PICKUP" ? t.sourceNodeId : t.destNodeId) || nodeForAddress(map.geometry, code)
-        const node = map.geometry.nodes.find((n) => n.id === nodeId)
-        if (node && dist(node, p) * mpu <= AUTO_ARRIVE_M) {
-          const locked = await ctx.client.query(`SELECT 1 FROM route_tasks WHERE task_id = $1::bigint FOR UPDATE`, [t.taskId])
-          void locked
-          await transition(ctx.client, t, t.status === "EN_ROUTE_PICKUP" ? "arrive_pickup" : "arrive_dropoff", {
-            actor: "system:position",
-            reason: `позиция AprilTag в ${AUTO_ARRIVE_M} м от ${code}`,
-          })
-          arrived = code
-        }
-      }
-    }
+    const arrived = await autoArrive(ctx.client, ctx.siteId, id, p, map, mpu)
     return { accepted: true, position: p, arrived }
   })
 }
