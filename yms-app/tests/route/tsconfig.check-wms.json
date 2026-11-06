@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.yms.json",
+  "compilerOptions": {
+    "strict": false,
+    "allowJs": false,
+    "paths": {
+      "@/*": ["../../../*"],
+      "pg": ["./shims/pg/index.d.ts"],
+      "next/server": ["./shims/next-server/index.ts"],
+      "next/headers": ["./shims/next-headers/index.ts"]
+    }
+  },
+  "include": ["../../../lib/wms/route-integration.ts", "../../../app/api/wms/route/**/*.ts"]
+}

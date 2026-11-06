@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.yms.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["../../../*"],
+      "pg": ["./shims/pg/index.js"],
+      "next/server": ["./shims/next-server/index.ts"],
+      "next/headers": ["./shims/next-headers/index.ts"]
+    }
+  }
+}

@@ -11,6 +11,10 @@ export function middleware(req: NextRequest) {
   ) {
     return NextResponse.next()
   }
+  // Route API принимает Bearer (SCADA ID / токен устройства) — проверка в самом обработчике.
+  if (pathname.startsWith("/api/route/") && req.headers.get("authorization")) {
+    return NextResponse.next()
+  }
   const token = req.cookies.get("yms_session")?.value
   if (!token && pathname.startsWith("/api/")) {
     return NextResponse.json({ error: "Нужен вход в YMS", code: "auth_required" }, { status: 401 })
@@ -18,11 +22,12 @@ export function middleware(req: NextRequest) {
   if (!token) {
     const url = req.nextUrl.clone()
     url.pathname = "/login"
+    url.search = pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : ""
     return NextResponse.redirect(url)
   }
   return NextResponse.next()
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|route/plan/).*)"],
 }

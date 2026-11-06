@@ -13,7 +13,7 @@ export default function LoginPage() {
       <section className="yms-card">
         <p className="yms-kicker">SCADA SYSTEM</p>
         <h1>YMS</h1>
-        <p>Территория, КПП и доки. Вход тем же логином, что и в WMS.</p>
+        <p>Территория, КПП, доки и навигатор погрузчиков Route. Вход тем же логином, что и в WMS.</p>
         <form
           onSubmit={(event) => {
             event.preventDefault()
@@ -27,7 +27,8 @@ export default function LoginPage() {
               .then(async (res) => {
                 const data = (await res.json().catch(() => ({}))) as { error?: string }
                 if (!res.ok) throw new Error(data.error || "Не удалось войти")
-                window.location.href = "/"
+                const next = new URLSearchParams(window.location.search).get("next") || "/"
+                window.location.href = next.startsWith("/") && !next.startsWith("//") ? next : "/"
               })
               .catch((e: Error) => setError(e.message))
               .finally(() => setBusy(false))

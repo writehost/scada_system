@@ -67,3 +67,8 @@ npm run build
 
 Собирать `yms-app` отдельно и выкладывать standalone в `/opt/scadatable-yms`. Службу `scadatable-wms-ui` и каталог Frontend не останавливать и не перезаписывать. GSMT не трогать.
 
+
+
+## SCADA System Route
+
+Навигатор водителя погрузчика, диспетчерская погрузчиков и редактор карты склада ГП встроены в `yms-app`: `/route`, `/route/dispatch`, `/route/editor`. Описание, API и развёртывание — [ROUTE.md](ROUTE.md), инструкция водителя — [ROUTE-DRIVER.md](ROUTE-DRIVER.md).

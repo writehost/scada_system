@@ -1,0 +1,21 @@
+{
+  "serverUrl": "https://yms.scadasystem.io",
+  "deviceToken": "rdev_… (выпускается в /route/editor → Устройства)",
+  "siteCode": "skeet",
+  "karaId": "kara-1",
+  "camera": {
+    "kind": "hikrobot",
+    "serial": "DA1234567",
+    "mvimportPath": "/opt/MVS/Samples/64/Python/MvImport",
+    "exposureUs": 4000,
+    "gainDb": 6
+  },
+  "families": ["tag36h11"],
+  "calibrationFile": null,
+  "maxHz": 4,
+  "lostAfterS": 3,
+  "predictMaxS": 1.5,
+  "maxReprojPx": 2.0,
+  "odometry": null,
+  "refreshConfigS": 300
+}
